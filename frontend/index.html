@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Before and Aftordle</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">Before and Aftordle</h1>
+            <p class="subtitle">Daily word puzzle game</p>
+        </div>
+        
+        <div class="game-container">
+            <!-- Intro Screen -->
+            <div class="intro-screen" id="introScreen">
+                <div class="intro-content">
+                    <h2>How to Play</h2>
+                    
+                    <div class="how-to-play">
+                        <p><strong>Before and After</strong> puzzles combine two phrases that share a common word or phrase.</p>
+                        
+                        <p>For example: <em>"Furniture for beverages + Book navigation aid"</em></p>
+                        <p>Answer: <strong>COFFEE TABLE OF CONTENTS</strong></p>
+                        <p>The word "TABLE" connects "Coffee Table" and "Table of Contents"</p>
+                        
+                        <div class="example-box">
+                            <p><strong>Game Rules:</strong></p>
+                            <ul>
+                                <li>Solve 5 clues in sequence</li>
+                                <li>Type your answer and press Enter</li>
+                                <li>Use hints if needed, but they'll lower your score</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <button class="start-btn" onclick="startGame()">Start Today's Puzzle</button>
+                </div>
+            </div>
+            
+            <!-- Game Screen -->
+            <div class="game-screen" id="gameScreen">
+                <div class="timer-section">
+                    <div class="timer" id="timer">00:00</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress"></div>
+                    </div>
+                </div>
+                
+                <div class="question-section">
+                    <div class="question-number" id="questionNumber">Question 1 of 5</div>
+                    <div class="clue" id="clue"></div>
+                    <div class="answer-display" id="answerDisplay">
+                        <div class="empty-message">Use a hint to reveal word structure</div>
+                    </div>
+                </div>
+                
+                <div class="input-section">
+                    <input type="text" class="answer-input" id="answerInput" placeholder="Type your answer and press Enter">
+                </div>
+                
+                <div class="hint-section">
+                    <button class="hint-btn" id="hintBtn" onclick="giveHint()">Get Hint (lose points)</button>
+                </div>
+                
+                <div class="feedback" id="feedback" style="display: none;"></div>
+            </div>
+            
+            <!-- Results Screen -->
+            <div class="results-screen" id="resultsScreen">
+                <h2 class="results-title">Before and Aftordle Complete!</h2>
+                
+                <div class="performance-grid" id="performanceGrid"></div>
+                
+                <div class="final-score">
+                    <div><strong>Score: <span id="finalScore"></span></strong></div>
+                </div>
+                
+                <div class="score-breakdown">
+                    <div>Completion time: <span id="completionTime"></span></div>
+                    <div>Wrong answers: -<span id="wrongAnswerPenalty"></span> points</div>
+                    <div>Hint penalties: -<span id="hintPenalty"></span> points</div>
+                    <div>Total penalties: -<span id="totalPenalties"></span> points</div>
+                    <div>Streak: <span id="streak"></span> days</div>
+                </div>
+                
+                <button class="new-game-btn" onclick="startNewGame()">Play Tomorrow's Puzzle</button>
+                
+                <div class="stats">
+                    <h3>Your Stats</h3>
+                    <div>Games played: <span id="gamesPlayed"></span></div>
+                    <div>Current streak: <span id="currentStreak"></span></div>
+                    <div>Best score: <span id="bestScore"></span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
