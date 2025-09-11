@@ -1,5 +1,8 @@
 // API Configuration
-const API_BASE = 'http://localhost:3001/api';
+// Auto-detect environment
+const API_BASE = window.location.hostname === 'localhost' || window.location.protocol === 'file:' 
+    ? 'http://localhost:3001/api'  // Local development
+    : 'https://before-and-aftordle.onrender.com/api';  // Production
 
 // Game state
 let currentQuestion = 0;
