@@ -27,6 +27,10 @@ let puzzleClues = [];
 let wordStates = []; // Array of arrays - one per question
 let structureRevealed = []; // Track if structure is revealed per question
 
+// Custom keyboard state
+let currentAnswer = '';
+let keyboardVisible = false;
+
 // ===== INITIALIZATION =====
 
 function initGame() {
@@ -34,6 +38,7 @@ function initGame() {
     document.getElementById('gameScreen').style.display = 'none';
     document.getElementById('resultsScreen').style.display = 'none';
     loadTodaysPuzzle();
+    initializeCustomKeyboard();
 }
 
 async function loadTodaysPuzzle() {
@@ -84,19 +89,28 @@ function startGame() {
         return;
     }
     
-    document.getElementById('introScreen').style.display = 'none';
-    document.getElementById('gameScreen').style.display = 'block';
-    
     // Reset game state
     currentQuestion = 0;
-    startTime = Date.now();
-    questionHints = new Array(puzzleClues.length).fill(0);
-    gameComplete = false;
     totalHintsUsed = 0;
-    wrongAnswers = 0;
     hintPenalties = 0;
+    wrongAnswers = 0;
+    gameComplete = false;
+    questionHints = [];
     wordStates = [];
     structureRevealed = [];
+    
+    // Initialize arrays for all questions
+    for (let i = 0; i < puzzleClues.length; i++) {
+        questionHints[i] = 0;
+        wordStates[i] = [];
+        structureRevealed[i] = false;
+    }
+    
+    startTime = Date.now();
+    
+    // Hide intro and show game
+    document.getElementById('introScreen').style.display = 'none';
+    document.getElementById('gameScreen').style.display = 'block';
     
     loadQuestion();
     startTimer();
@@ -104,123 +118,100 @@ function startGame() {
 
 function loadQuestion() {
     if (currentQuestion >= puzzleClues.length) {
-        showResults();
+        endGame();
         return;
     }
-
+    
     const clue = puzzleClues[currentQuestion];
     
-    document.getElementById('questionNumber').textContent = `Question ${currentQuestion + 1} of ${puzzleClues.length}`;
+    // Update UI
+    document.getElementById('questionNumber').textContent = currentQuestion + 1;
     document.getElementById('clue').textContent = clue.clue;
-    document.getElementById('answerInput').value = '';
-    document.getElementById('answerInput').focus();
     document.getElementById('feedback').style.display = 'none';
+    document.getElementById('answerInput').value = '';
     
-    updateProgress();
-    updateDisplay();
-    updateHintButton();
-}
-
-function updateDisplay() {
-    if (isStructureRevealed()) {
-        renderInteractiveWordDisplay();
-    } else {
-        showEmptyState();
-    }
-}
-
-function showEmptyState() {
+    // Reset answer display
     const display = document.getElementById('answerDisplay');
-    display.innerHTML = '<div class="empty-message">Reveal the word structure to begin solving this clue</div>';
+    display.innerHTML = '<div class="empty-message">Structure will be revealed with hints</div>';
+    
+    // Reset hint button
+    updateHintButton();
+    
+    // Update progress
+    updateProgress();
+    
+    // Reset custom keyboard
+    resetCustomKeyboard();
 }
 
-// ===== API CALLS =====
-
-async function getStructureHint() {
-    try {
-        const response = await fetch(`${API_BASE}/puzzles/get-hint`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ clue_number: currentQuestion + 1 })
-        });
-        
-        const hintData = await response.json();
-        if (hintData.error) {
-            showFeedback(`Hint error: ${hintData.error}`, 'incorrect');
-            return null;
-        }
-        return hintData;
-    } catch (error) {
-        console.error('Error getting structure hint:', error);
-        showFeedback('Failed to get hint. Try again.', 'incorrect');
-        return null;
-    }
+function updateProgress() {
+    const progress = ((currentQuestion) / puzzleClues.length) * 100;
+    document.getElementById('progressFill').style.width = `${progress}%`;
 }
 
-async function getWordHint(wordIndex, hintType) {
-    try {
-        const response = await fetch(`${API_BASE}/puzzles/get-hint`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                clue_number: currentQuestion + 1,
-                word_index: wordIndex,
-                hint_type: hintType
-            })
-        });
-        
-        const hintData = await response.json();
-        if (hintData.error) {
-            showFeedback(`Hint error: ${hintData.error}`, 'incorrect');
-            return null;
-        }
-        return hintData;
-    } catch (error) {
-        console.error('Error getting word hint:', error);
-        showFeedback('Failed to get hint. Try again.', 'incorrect');
-        return null;
-    }
+function startTimer() {
+    const timerElement = document.getElementById('timer');
+    
+    timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }, 1000);
 }
+
+function nextQuestion() {
+    currentQuestion++;
+    setTimeout(() => {
+        loadQuestion();
+    }, 1500);
+}
+
+function endGame() {
+    clearInterval(timerInterval);
+    gameComplete = true;
+    
+    const endTime = Date.now();
+    const totalTimeSeconds = Math.floor((endTime - startTime) / 1000);
+    
+    showResults(totalTimeSeconds);
+}
+
+// ===== ANSWER VALIDATION =====
 
 async function checkAnswer() {
-    const userAnswer = document.getElementById('answerInput').value.toUpperCase().trim();
+    const userAnswer = document.getElementById('answerInput').value.trim();
+    if (!userAnswer) return;
     
-    if (!userAnswer) {
-        showFeedback('Please enter an answer!', 'incorrect');
-        return;
-    }
+    const clue = puzzleClues[currentQuestion];
     
     try {
-        const response = await fetch(`${API_BASE}/puzzles/validate-clue`, {
+        const response = await fetch(`${API_BASE}/puzzles/validate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                clue_number: currentQuestion + 1,
-                answer: userAnswer
+                puzzle_id: todaysPuzzle.id,
+                clue_id: clue.id,
+                user_answer: userAnswer
             })
         });
         
         const result = await response.json();
         
-        if (result.error) {
-            showFeedback(`Error: ${result.error}`, 'incorrect');
-            return;
-        }
-        
         if (result.correct) {
-            showFeedback(`Correct! Answer: ${result.full_answer}`, 'correct');
+            showFeedback('Correct! Moving to next clue...', 'correct');
             
-            if (result.full_answer && result.linking_word) {
-                setTimeout(() => showCompleteAnswer(result.full_answer, result.linking_word), 500);
+            // Show complete answer
+            showCompleteAnswer(result.correct_answer, result.linking_word);
+            
+            if (currentQuestion === puzzleClues.length - 1) {
+                setTimeout(endGame, 2000);
+            } else {
+                nextQuestion();
             }
-            
-            setTimeout(() => {
-                currentQuestion++;
-                loadQuestion();
-            }, 2500);
         } else {
             wrongAnswers++;
-            showFeedback('Try again!', 'incorrect');
+            showFeedback('Incorrect. Try again!', 'incorrect');
             document.getElementById('answerInput').value = '';
         }
         
@@ -228,6 +219,10 @@ async function checkAnswer() {
         console.error('Error validating answer:', error);
         showFeedback('Connection error. Please try again.', 'incorrect');
     }
+}
+
+function submitAnswer() {
+    checkAnswer();
 }
 
 // ===== HINT SYSTEM =====
@@ -322,67 +317,122 @@ async function handleWordClick(wordIndex) {
     // Show feedback
     const penaltyText = `-${hintData.penalty} points`;
     const isLinking = wordState.is_linking ? 'Linking word ' : '';
-    const actionText = hintType === 'first_letter' ? 'first letter revealed' : 'fully revealed';
+    const actionText = hintType === 'first_letter' ? 
+        'first letter revealed' : 'fully revealed';
+    
     showFeedback(`${isLinking}${actionText} (${penaltyText})`, 'incorrect');
     
-    // Update state and animate (no re-render)
-    updateWordState(wordIndex, hintData);
-    
-    checkLinkingWordAvailability();
-}
-
-function updateWordState(wordIndex, hintData) {
-    const currentWordStates = getCurrentWordStates();
-    const wordState = currentWordStates[wordIndex];
-    const revealedWord = hintData.revealed_word;
-    
-    if (hintData.hint_type === 'first_letter') {
+    // Update word state
+    if (hintType === 'first_letter') {
         wordState.state = 'first_letter';
-        wordState.letters[0] = revealedWord.word[0];
-        wordState.clickable = true;
+        wordState.letters[0] = hintData.letter || hintData.word[0];
         
-        // Animate single letter reveal
-        setTimeout(() => animateLetterReveal(wordIndex, 0), 100);
+        // Animate the letter reveal
+        animateLetterReveal(wordIndex, 0);
         
-    } else if (hintData.hint_type === 'full_word') {
+    } else if (hintType === 'full_word') {
         wordState.state = 'full_word';
-        wordState.letters = revealedWord.word.split('');
+        wordState.letters = hintData.word.split('');
         wordState.clickable = false;
         
-        // Animate full word reveal with stagger
-        setTimeout(() => animateFullWordReveal(wordIndex, revealedWord.word), 100);
+        // Animate full word reveal
+        animateFullWordReveal(wordIndex, hintData.word);
+        
+        // Check if linking word should be unlocked
+        checkLinkingWordUnlock();
     }
+    
+    console.log('Updated word state:', wordState);
 }
 
-function checkLinkingWordAvailability() {
+function checkLinkingWordUnlock() {
     const currentWordStates = getCurrentWordStates();
-    const linkingWordIndex = currentWordStates.findIndex(word => word.is_linking);
-    if (linkingWordIndex === -1) return;
+    if (!currentWordStates) return;
     
+    // Check if all non-linking words are fully revealed
     const nonLinkingWords = currentWordStates.filter(word => !word.is_linking);
     const allNonLinkingRevealed = nonLinkingWords.every(word => word.state === 'full_word');
     
-    const wasClickable = currentWordStates[linkingWordIndex].clickable;
-    currentWordStates[linkingWordIndex].clickable = allNonLinkingRevealed;
-    
-    if (allNonLinkingRevealed && !wasClickable && currentWordStates[linkingWordIndex].state !== 'full_word') {
-        setTimeout(() => showFeedback('The linking word may now be revealed', 'correct'), 500);
+    if (allNonLinkingRevealed) {
+        // Unlock linking word
+        const linkingWord = currentWordStates.find(word => word.is_linking);
+        if (linkingWord && !linkingWord.clickable) {
+            linkingWord.clickable = true;
+            console.log('Linking word unlocked!');
+            
+            // Re-render to show the unlocked state
+            renderInteractiveWordDisplay(false); // false = don't animate again
+        }
     }
+}
+
+// ===== API HELPER FUNCTIONS =====
+
+async function getStructureHint() {
+    const clue = puzzleClues[currentQuestion];
+    
+    try {
+        const response = await fetch(`${API_BASE}/puzzles/hint`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                puzzle_id: todaysPuzzle.id,
+                clue_id: clue.id,
+                hint_type: 'structure'
+            })
+        });
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error getting structure hint:', error);
+        showFeedback('Connection error. Please try again.', 'incorrect');
+        return null;
+    }
+}
+
+async function getWordHint(wordIndex, hintType) {
+    const clue = puzzleClues[currentQuestion];
+    
+    try {
+        const response = await fetch(`${API_BASE}/puzzles/hint`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                puzzle_id: todaysPuzzle.id,
+                clue_id: clue.id,
+                hint_type: hintType,
+                word_index: wordIndex
+            })
+        });
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error getting word hint:', error);
+        showFeedback('Connection error. Please try again.', 'incorrect');
+        return null;
+    }
+}
+
+// ===== STATE HELPERS =====
+
+function isStructureRevealed() {
+    return structureRevealed[currentQuestion] || false;
+}
+
+function getCurrentWordStates() {
+    return wordStates[currentQuestion] || null;
 }
 
 // ===== DISPLAY FUNCTIONS =====
 
-function renderInteractiveWordDisplay() {
+function renderInteractiveWordDisplay(isFirstRender = true) {
     const display = document.getElementById('answerDisplay');
     const currentWordStates = getCurrentWordStates();
     
     if (!currentWordStates) {
-        showEmptyState();
+        display.innerHTML = '<div class="empty-message">Use hint to reveal word structure</div>';
         return;
     }
-    
-    // Check if this is the first render (structure reveal) or a re-render (after hint)
-    const isFirstRender = !display.querySelector('.letter-box');
     
     let html = '<div class="letter-boxes">';
     
@@ -564,181 +614,96 @@ function showFeedback(message, type) {
     feedback.classList.add(type);
     feedback.style.display = 'block';
     
-    const duration = type === 'correct' ? 3000 : 4000;
+    const duration = type === 'correct' ? 3000 : 2000;
     setTimeout(() => {
-        if (feedback.textContent === message) {
-            feedback.style.display = 'none';
-        }
+        feedback.style.display = 'none';
     }, duration);
 }
 
-function updateProgress() {
-    const progress = (currentQuestion / puzzleClues.length) * 100;
-    document.getElementById('progress').style.width = progress + '%';
+// ===== RESULTS SCREEN =====
+
+function showResults(totalTimeSeconds) {
+    document.getElementById('gameScreen').style.display = 'none';
+    document.getElementById('resultsScreen').style.display = 'block';
+    
+    const minutes = Math.floor(totalTimeSeconds / 60);
+    const seconds = totalTimeSeconds % 60;
+    const timeText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Calculate score
+    const baseScore = puzzleClues.length * 100;
+    const timeBonus = Math.max(0, 300 - totalTimeSeconds);
+    const finalScore = baseScore + timeBonus - hintPenalties - (wrongAnswers * 10);
+    
+    // Update results display
+    document.getElementById('finalTime').textContent = timeText;
+    document.getElementById('finalScore').textContent = finalScore;
+    document.getElementById('hintsUsed').textContent = totalHintsUsed;
+    document.getElementById('wrongAnswersCount').textContent = wrongAnswers;
+    
+    // Performance grid
+    showPerformanceGrid();
+    
+    // Submit results to backend
+    submitGameResults(totalTimeSeconds, finalScore);
 }
 
-function startTimer() {
-    timerInterval = setInterval(() => {
-        if (!gameComplete) {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const minutes = Math.floor(elapsed / 60);
-            const seconds = elapsed % 60;
-            document.getElementById('timer').textContent = 
-                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
-    }, 1000);
-}
-
-// ===== UTILITY FUNCTIONS =====
-
-function getCurrentWordStates() {
-    return wordStates[currentQuestion] || null;
-}
-
-function isStructureRevealed() {
-    return structureRevealed[currentQuestion] || false;
-}
-
-function getQuestionHintSummary() {
-    const currentWordStates = getCurrentWordStates();
-    if (!currentWordStates) return { hintsUsed: 0, totalPenalty: 0 };
-    
-    let hintsUsed = 0;
-    let totalPenalty = 0;
-    
-    if (isStructureRevealed()) {
-        hintsUsed++;
-        totalPenalty += 5;
-    }
-    
-    currentWordStates.forEach(word => {
-        if (word.state === 'first_letter') {
-            hintsUsed++;
-            totalPenalty += word.is_linking ? 5 : 3;
-        } else if (word.state === 'full_word') {
-            hintsUsed += 2;
-            totalPenalty += word.is_linking ? 10 : 6;
-        }
-    });
-    
-    return { hintsUsed, totalPenalty };
-}
-
-// ===== RESULTS =====
-
-async function showResults() {
-    gameComplete = true;
-    clearInterval(timerInterval);
-    
-    const totalTime = Math.floor((Date.now() - startTime) / 1000);
-    const wrongAnswerPenalty = wrongAnswers * 2;
-    const totalPenalties = wrongAnswerPenalty + hintPenalties;
-    const finalScore = Math.max(0, 100 - totalPenalties);
-    
-    // Generate performance grid
+function showPerformanceGrid() {
     const grid = document.getElementById('performanceGrid');
     grid.innerHTML = '';
     
-    for (let i = 0; i < puzzleClues.length; i++) {
+    questionHints.forEach((hints, index) => {
         const dot = document.createElement('div');
         dot.className = 'performance-dot';
+        dot.textContent = index + 1;
         
-        const originalQuestion = currentQuestion;
-        currentQuestion = i;
-        const summary = getQuestionHintSummary();
-        currentQuestion = originalQuestion;
-        
-        if (summary.hintsUsed === 0) {
+        if (hints === 0) {
             dot.classList.add('perfect');
-        } else if (summary.hintsUsed <= 2) {
+        } else if (hints <= 2) {
             dot.classList.add('good');
-        } else if (summary.hintsUsed <= 5) {
+        } else if (hints <= 4) {
             dot.classList.add('struggled');
         } else {
             dot.classList.add('heavy-struggle');
         }
         
-        dot.textContent = '✓';
-        dot.title = `Question ${i+1}: ${summary.hintsUsed} hints used (-${summary.totalPenalty} points)`;
         grid.appendChild(dot);
-    }
-    
-    // Display results
-    const minutes = Math.floor(totalTime / 60);
-    const seconds = totalTime % 60;
-    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    
-    document.getElementById('finalScore').textContent = `${finalScore}/100`;
-    document.getElementById('completionTime').textContent = timeStr;
-    document.getElementById('wrongAnswerPenalty').textContent = wrongAnswerPenalty;
-    document.getElementById('hintPenalty').textContent = hintPenalties;
-    document.getElementById('totalPenalties').textContent = totalPenalties;
-    
-    await submitResults(finalScore, totalTime);
-    updateStats(finalScore);
-    
-    document.getElementById('gameScreen').style.display = 'none';
-    document.getElementById('resultsScreen').style.display = 'block';
+    });
 }
 
-async function submitResults(score, completionTime) {
+async function submitGameResults(totalTimeSeconds, finalScore) {
     try {
-        const clueResults = questionHints.map((hints, index) => ({
-            clue_number: index + 1,
-            hints_used: hints
-        }));
-        
-        const response = await fetch(`${API_BASE}/puzzles/submit-result`, {
+        await fetch(`${API_BASE}/puzzles/submit-result`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                score, completionTime, hintsUsed: totalHintsUsed, wrongAnswers,
-                hintBreakdown: { total: hintPenalties, per_clue: questionHints },
-                clueResults
+                puzzle_id: todaysPuzzle.id,
+                completion_time: totalTimeSeconds,
+                hints_used: totalHintsUsed,
+                score: finalScore,
+                wrong_answers: wrongAnswers
             })
         });
-        
-        const result = await response.json();
-        if (result.success) {
-            console.log('Results submitted successfully:', result);
-        }
+        console.log('Game results submitted successfully');
     } catch (error) {
-        console.error('Error submitting results:', error);
+        console.error('Failed to submit game results:', error);
     }
-}
-
-function updateStats(score) {
-    let stats = {};
-    try {
-        stats = JSON.parse(localStorage.getItem('beforeAndAftordleStats') || '{}');
-    } catch (e) {
-        stats = { gamesPlayed: 0, currentStreak: 0, bestScore: 0 };
-    }
-    
-    stats.gamesPlayed = (stats.gamesPlayed || 0) + 1;
-    stats.currentStreak = (stats.currentStreak || 0) + 1;
-    
-    if (!stats.bestScore || score > stats.bestScore) {
-        stats.bestScore = score;
-    }
-    
-    try {
-        localStorage.setItem('beforeAndAftordleStats', JSON.stringify(stats));
-    } catch (e) {
-        // localStorage not available
-    }
-    
-    document.getElementById('gamesPlayed').textContent = stats.gamesPlayed;
-    document.getElementById('currentStreak').textContent = stats.currentStreak;
-    document.getElementById('streak').textContent = stats.currentStreak;
-    document.getElementById('bestScore').textContent = `${stats.bestScore}/100`;
 }
 
 function startNewGame() {
-    clearInterval(timerInterval);
+    // Reset all game state
+    currentQuestion = 0;
+    totalHintsUsed = 0;
+    hintPenalties = 0;
+    wrongAnswers = 0;
+    gameComplete = false;
+    questionHints = [];
+    wordStates = [];
+    structureRevealed = [];
     
-    const newGameBtn = document.querySelector('.new-game-btn');
-    newGameBtn.textContent = "Tomorrow's Puzzle Coming Soon!";
+    // Show loading message and reload puzzle
+    const newGameBtn = document.getElementById('newGameBtn');
+    newGameBtn.textContent = "Loading new puzzle...";
     newGameBtn.disabled = true;
     newGameBtn.style.background = '#6c757d';
     
@@ -748,6 +713,286 @@ function startNewGame() {
         newGameBtn.style.background = '#667eea';
     }, 3000);
 }
+
+// ===== CUSTOM KEYBOARD SYSTEM =====
+
+// Initialize custom keyboard
+function initializeCustomKeyboard() {
+    // Only on mobile/tablet
+    if (window.innerWidth > 768) return;
+    
+    createKeyboardHTML();
+    setupKeyboardEventListeners();
+    
+    // Show keyboard when input area is tapped
+    const answerInput = document.getElementById('answerInput');
+    if (answerInput) {
+        answerInput.addEventListener('click', showCustomKeyboard);
+        answerInput.addEventListener('focus', showCustomKeyboard);
+        
+        // Prevent system keyboard
+        answerInput.setAttribute('readonly', 'true');
+        answerInput.setAttribute('inputmode', 'none');
+    }
+}
+
+function createKeyboardHTML() {
+    // Remove existing keyboard if present
+    const existingKeyboard = document.querySelector('.custom-keyboard');
+    if (existingKeyboard) {
+        existingKeyboard.remove();
+    }
+    
+    const keyboardHTML = `
+        <div class="custom-keyboard" id="customKeyboard">
+            <div class="keyboard-input-display empty" id="keyboardDisplay"></div>
+            
+            <div class="keyboard-grid">
+                <div class="keyboard-row row-1">
+                    <div class="key" data-key="Q">Q</div>
+                    <div class="key" data-key="W">W</div>
+                    <div class="key" data-key="E">E</div>
+                    <div class="key" data-key="R">R</div>
+                    <div class="key" data-key="T">T</div>
+                    <div class="key" data-key="Y">Y</div>
+                    <div class="key" data-key="U">U</div>
+                    <div class="key" data-key="I">I</div>
+                    <div class="key" data-key="O">O</div>
+                    <div class="key" data-key="P">P</div>
+                </div>
+                
+                <div class="keyboard-row row-2">
+                    <div class="key" data-key="A">A</div>
+                    <div class="key" data-key="S">S</div>
+                    <div class="key" data-key="D">D</div>
+                    <div class="key" data-key="F">F</div>
+                    <div class="key" data-key="G">G</div>
+                    <div class="key" data-key="H">H</div>
+                    <div class="key" data-key="J">J</div>
+                    <div class="key" data-key="K">K</div>
+                    <div class="key" data-key="L">L</div>
+                </div>
+                
+                <div class="keyboard-row row-3">
+                    <div class="key" data-key="Z">Z</div>
+                    <div class="key" data-key="X">X</div>
+                    <div class="key" data-key="C">C</div>
+                    <div class="key" data-key="V">V</div>
+                    <div class="key" data-key="B">B</div>
+                    <div class="key" data-key="N">N</div>
+                    <div class="key" data-key="M">M</div>
+                </div>
+                
+                <div class="keyboard-actions">
+                    <div class="key spacebar" data-key=" ">SPACE</div>
+                    <div class="key backspace" data-key="BACKSPACE">⌫</div>
+                    <div class="key enter" data-key="ENTER" id="enterKey">ENTER</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', keyboardHTML);
+}
+
+function setupKeyboardEventListeners() {
+    const keyboard = document.getElementById('customKeyboard');
+    if (!keyboard) return;
+    
+    // Handle key presses
+    keyboard.addEventListener('click', handleKeyPress);
+    
+    // Handle physical keyboard when custom keyboard is visible
+    document.addEventListener('keydown', handlePhysicalKeyboard);
+    
+    // Hide keyboard when clicking outside
+    document.addEventListener('click', handleOutsideClick);
+}
+
+function handleKeyPress(event) {
+    const key = event.target.closest('.key');
+    if (!key) return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const keyValue = key.getAttribute('data-key');
+    
+    // Visual feedback
+    key.classList.add('pressed');
+    setTimeout(() => key.classList.remove('pressed'), 100);
+    
+    // Handle the key action
+    processKeyInput(keyValue);
+}
+
+function handlePhysicalKeyboard(event) {
+    if (!keyboardVisible) return;
+    
+    event.preventDefault();
+    
+    const key = event.key.toUpperCase();
+    
+    if (key === 'ENTER') {
+        processKeyInput('ENTER');
+    } else if (key === 'BACKSPACE') {
+        processKeyInput('BACKSPACE');
+    } else if (key === ' ') {
+        processKeyInput(' ');
+    } else if (key === 'ESCAPE') {
+        hideCustomKeyboard();
+    } else if (/^[A-Z]$/.test(key)) {
+        processKeyInput(key);
+    }
+}
+
+function processKeyInput(keyValue) {
+    const display = document.getElementById('keyboardDisplay');
+    const answerInput = document.getElementById('answerInput');
+    const enterKey = document.getElementById('enterKey');
+    
+    if (keyValue === 'BACKSPACE') {
+        currentAnswer = currentAnswer.slice(0, -1);
+    } else if (keyValue === 'ENTER') {
+        if (currentAnswer.trim()) {
+            handleAnswerSubmission();
+            return;
+        }
+    } else if (keyValue === ' ') {
+        // Only add space if there's content and doesn't end with space
+        if (currentAnswer && !currentAnswer.endsWith(' ')) {
+            currentAnswer += ' ';
+        }
+    } else if (/^[A-Z]$/.test(keyValue)) {
+        // Limit answer length (reasonable limit for phrases)
+        if (currentAnswer.length < 50) {
+            currentAnswer += keyValue;
+        }
+    }
+    
+    // Update display
+    updateKeyboardDisplay();
+    
+    // Update the actual input field
+    if (answerInput) {
+        answerInput.value = currentAnswer;
+    }
+    
+    // Enable/disable enter button
+    if (enterKey) {
+        enterKey.disabled = !currentAnswer.trim();
+    }
+}
+
+function updateKeyboardDisplay() {
+    const display = document.getElementById('keyboardDisplay');
+    if (!display) return;
+    
+    if (currentAnswer) {
+        display.textContent = currentAnswer;
+        display.classList.remove('empty');
+    } else {
+        display.textContent = '';
+        display.classList.add('empty');
+    }
+}
+
+function handleAnswerSubmission() {
+    if (!currentAnswer.trim()) return;
+    
+    // Hide keyboard first
+    hideCustomKeyboard();
+    
+    // Submit the answer using existing game logic
+    const answerInput = document.getElementById('answerInput');
+    if (answerInput) {
+        answerInput.value = currentAnswer;
+        
+        // Trigger the existing submit logic
+        checkAnswer();
+    }
+    
+    // Clear the current answer
+    currentAnswer = '';
+    updateKeyboardDisplay();
+}
+
+function showCustomKeyboard() {
+    if (window.innerWidth > 768) return; // Desktop - use normal keyboard
+    
+    const keyboard = document.getElementById('customKeyboard');
+    if (!keyboard) {
+        initializeCustomKeyboard();
+        return;
+    }
+    
+    // Set current answer from input field
+    const answerInput = document.getElementById('answerInput');
+    if (answerInput) {
+        currentAnswer = answerInput.value || '';
+        updateKeyboardDisplay();
+    }
+    
+    keyboard.classList.add('visible');
+    keyboardVisible = true;
+    
+    // Add body class to adjust layout
+    document.body.classList.add('keyboard-open');
+    
+    // Scroll to keep game visible
+    setTimeout(() => {
+        const gameContainer = document.querySelector('.game-container');
+        if (gameContainer) {
+            gameContainer.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+    }, 300);
+}
+
+function hideCustomKeyboard() {
+    const keyboard = document.getElementById('customKeyboard');
+    if (!keyboard) return;
+    
+    keyboard.classList.remove('visible');
+    keyboardVisible = false;
+    
+    document.body.classList.remove('keyboard-open');
+}
+
+function handleOutsideClick(event) {
+    if (!keyboardVisible) return;
+    
+    const keyboard = document.getElementById('customKeyboard');
+    const answerInput = document.getElementById('answerInput');
+    
+    if (keyboard && 
+        !keyboard.contains(event.target) && 
+        !answerInput?.contains(event.target)) {
+        hideCustomKeyboard();
+    }
+}
+
+// Clean up current answer when starting new game
+function resetCustomKeyboard() {
+    currentAnswer = '';
+    updateKeyboardDisplay();
+    hideCustomKeyboard();
+}
+
+// Re-initialize on window resize (orientation change)
+window.addEventListener('resize', () => {
+    setTimeout(() => {
+        if (window.innerWidth <= 768 && !document.getElementById('customKeyboard')) {
+            initializeCustomKeyboard();
+        } else if (window.innerWidth > 768) {
+            hideCustomKeyboard();
+            const keyboard = document.getElementById('customKeyboard');
+            if (keyboard) keyboard.remove();
+        }
+    }, 100);
+});
 
 // ===== EVENT LISTENERS =====
 
@@ -759,4 +1004,7 @@ document.getElementById('answerInput').addEventListener('keypress', function(e) 
 
 // ===== INITIALIZATION =====
 
-initGame();
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    initGame();
+});
