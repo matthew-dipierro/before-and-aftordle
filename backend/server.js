@@ -54,8 +54,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// FORCE: Create new admin with secure password
-app.post('/api/admin/force-new-admin', async (req, res) => {
+// NUCLEAR: Completely rebuild admin user
+app.post('/api/admin/nuclear-admin-reset', async (req, res) => {
   try {
     const bcrypt = require('bcryptjs');
     const sqlite3 = require('sqlite3').verbose();
@@ -64,38 +64,40 @@ app.post('/api/admin/force-new-admin', async (req, res) => {
     const DB_PATH = path.join(__dirname, 'database.sqlite');
     const newPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
     
-    console.log('🔄 Creating new admin with secure password...');
+    console.log('💥 NUCLEAR: Completely rebuilding admin user...');
     
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     const db = new sqlite3.Database(DB_PATH);
     
-    // Delete old admin first, then create new one
     db.serialize(() => {
-      db.run(`DELETE FROM users WHERE username = 'admin'`, (err) => {
-        if (err) console.log('Note: No existing admin to delete');
+      // Delete ALL admin users
+      db.run(`DELETE FROM users WHERE is_admin = 1`, function(err) {
+        console.log(`Deleted ${this.changes} admin users`);
       });
       
-      db.run(`INSERT INTO users (username, email, password_hash, is_admin) VALUES (?, ?, ?, ?)`,
+      // Create fresh admin
+      db.run(`INSERT INTO users (username, email, password_hash, is_admin, created_at) 
+              VALUES (?, ?, ?, ?, datetime('now'))`,
         ['admin', 'admin@aftordle.com', hashedPassword, 1],
         function(err) {
           db.close();
           if (err) {
-            console.error('❌ Failed to create admin:', err);
-            res.status(500).json({ error: 'Failed to create admin user' });
+            console.error('❌ Failed:', err);
+            res.status(500).json({ error: err.message });
           } else {
-            console.log('✅ New admin created successfully with secure password');
+            console.log('✅ Nuclear reset complete - new admin created');
             res.json({ 
               success: true, 
-              message: 'New admin created with secure password',
-              userId: this.lastID 
+              message: 'Admin completely rebuilt with secure password',
+              newUserId: this.lastID 
             });
           }
         });
     });
     
   } catch (error) {
-    console.error('❌ Error:', error);
-    res.status(500).json({ error: 'Creation failed' });
+    console.error('❌ Nuclear error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
