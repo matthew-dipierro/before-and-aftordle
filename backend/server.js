@@ -54,6 +54,17 @@ app.use((err, req, res, next) => {
   });
 });
 
+// DEBUG: Check what password is being used
+app.get('/api/admin/debug-env', (req, res) => {
+  const newPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
+  res.json({
+    NODE_ENV: process.env.NODE_ENV,
+    HAS_DEFAULT_ADMIN_PASSWORD: !!process.env.DEFAULT_ADMIN_PASSWORD,
+    PASSWORD_LENGTH: newPassword.length,
+    PASSWORD_PREVIEW: newPassword.substring(0, 3) + '***' // First 3 chars for debugging
+  });
+});
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
