@@ -54,53 +54,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// NUCLEAR: Completely rebuild admin user
-app.post('/api/admin/nuclear-admin-reset', async (req, res) => {
-  try {
-    const bcrypt = require('bcryptjs');
-    const sqlite3 = require('sqlite3').verbose();
-    const path = require('path');
-    
-    const DB_PATH = path.join(__dirname, 'database.sqlite');
-    const newPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
-    
-    console.log('💥 NUCLEAR: Completely rebuilding admin user...');
-    
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    const db = new sqlite3.Database(DB_PATH);
-    
-    db.serialize(() => {
-      // Delete ALL admin users
-      db.run(`DELETE FROM users WHERE is_admin = 1`, function(err) {
-        console.log(`Deleted ${this.changes} admin users`);
-      });
-      
-      // Create fresh admin
-      db.run(`INSERT INTO users (username, email, password_hash, is_admin, created_at) 
-              VALUES (?, ?, ?, ?, datetime('now'))`,
-        ['admin', 'admin@aftordle.com', hashedPassword, 1],
-        function(err) {
-          db.close();
-          if (err) {
-            console.error('❌ Failed:', err);
-            res.status(500).json({ error: err.message });
-          } else {
-            console.log('✅ Nuclear reset complete - new admin created');
-            res.json({ 
-              success: true, 
-              message: 'Admin completely rebuilt with secure password',
-              newUserId: this.lastID 
-            });
-          }
-        });
-    });
-    
-  } catch (error) {
-    console.error('❌ Nuclear error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
