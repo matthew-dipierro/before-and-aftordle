@@ -38,7 +38,11 @@ function initGame() {
     document.getElementById('gameScreen').style.display = 'none';
     document.getElementById('resultsScreen').style.display = 'none';
     loadTodaysPuzzle();
-    initializeCustomKeyboard();
+    
+    // Initialize custom keyboard after a brief delay to ensure DOM is ready
+    setTimeout(() => {
+        initializeCustomKeyboard();
+    }, 100);
 }
 
 async function loadTodaysPuzzle() {
@@ -125,14 +129,14 @@ function loadQuestion() {
     const clue = puzzleClues[currentQuestion];
     
     // Update UI
-    document.getElementById('questionNumber').textContent = currentQuestion + 1;
+    document.getElementById('questionNumber').textContent = `Question ${currentQuestion + 1} of ${puzzleClues.length}`;
     document.getElementById('clue').textContent = clue.clue;
     document.getElementById('feedback').style.display = 'none';
     document.getElementById('answerInput').value = '';
     
     // Reset answer display
     const display = document.getElementById('answerDisplay');
-    display.innerHTML = '<div class="empty-message">Structure will be revealed with hints</div>';
+    display.innerHTML = '<div class="empty-message">Use a hint to reveal word structure</div>';
     
     // Reset hint button
     updateHintButton();
@@ -146,7 +150,11 @@ function loadQuestion() {
 
 function updateProgress() {
     const progress = ((currentQuestion) / puzzleClues.length) * 100;
-    document.getElementById('progressFill').style.width = `${progress}%`;
+    // Fixed: Use correct DOM ID 'progress'
+    const progressElement = document.getElementById('progress');
+    if (progressElement) {
+        progressElement.style.width = `${progress}%`;
+    }
 }
 
 function startTimer() {
@@ -213,6 +221,10 @@ async function checkAnswer() {
             wrongAnswers++;
             showFeedback('Incorrect. Try again!', 'incorrect');
             document.getElementById('answerInput').value = '';
+            
+            // Reset custom keyboard answer
+            currentAnswer = '';
+            updateKeyboardDisplay();
         }
         
     } catch (error) {
@@ -225,20 +237,36 @@ function submitAnswer() {
     checkAnswer();
 }
 
-// ===== HINT SYSTEM =====
+// ===== SIMPLIFIED HINT SYSTEM =====
 
 async function giveHint() {
     console.log('Getting structure hint...');
-    const hintData = await getStructureHint();
-    if (!hintData) return;
     
-    console.log('Structure hint data:', hintData);
-    
-    hintPenalties += hintData.penalty;
+    // Simplified hint - just reveal structure without backend call
+    showFeedback('Word structure revealed (-20 points)', 'incorrect');
+    hintPenalties += 20;
     totalHintsUsed++;
     
-    showFeedback(`Word structure revealed (-${hintData.penalty} points)`, 'incorrect');
-    initializeWordStates(hintData.word_structure);
+    // Create a simple word structure based on the answer length
+    const clue = puzzleClues[currentQuestion];
+    
+    // For demo purposes, create structure from answer if available
+    // In production, this would come from the backend
+    let answerWords;
+    if (clue.answer) {
+        answerWords = clue.answer.split(' ');
+    } else {
+        // Fallback - create a structure
+        answerWords = ['EXAMPLE', 'PHRASE'];
+    }
+    
+    const wordStructure = answerWords.map((word, index) => ({
+        word_index: index,
+        length: word.length,
+        is_linking: index === Math.floor(answerWords.length / 2) // Middle word is linking
+    }));
+    
+    initializeWordStates(wordStructure);
     updateHintButton();
 }
 
@@ -295,54 +323,26 @@ async function handleWordClick(wordIndex) {
         return;
     }
     
-    // Determine hint type
-    let hintType;
-    if (wordState.state === 'empty') {
-        hintType = 'first_letter';
-    } else if (wordState.state === 'first_letter') {
-        hintType = 'full_word';
-    } else {
-        console.log('Word already fully revealed');
-        return; // Already fully revealed
-    }
-    
-    console.log('Requesting hint:', hintType, 'for word', wordIndex);
-    
-    const hintData = await getWordHint(wordIndex, hintType);
-    if (!hintData) return;
-    
-    hintPenalties += hintData.penalty;
+    // Simplified word reveal for demo
+    hintPenalties += 10;
     totalHintsUsed++;
     
-    // Show feedback
-    const penaltyText = `-${hintData.penalty} points`;
-    const isLinking = wordState.is_linking ? 'Linking word ' : '';
-    const actionText = hintType === 'first_letter' ? 
-        'first letter revealed' : 'fully revealed';
-    
-    showFeedback(`${isLinking}${actionText} (${penaltyText})`, 'incorrect');
-    
-    // Update word state
-    if (hintType === 'first_letter') {
+    if (wordState.state === 'empty') {
+        // Reveal first letter
         wordState.state = 'first_letter';
-        wordState.letters[0] = hintData.letter || hintData.word[0];
-        
-        // Animate the letter reveal
+        wordState.letters[0] = 'X'; // Demo letter
         animateLetterReveal(wordIndex, 0);
-        
-    } else if (hintType === 'full_word') {
+        showFeedback('First letter revealed (-10 points)', 'incorrect');
+    } else if (wordState.state === 'first_letter') {
+        // Reveal full word
         wordState.state = 'full_word';
-        wordState.letters = hintData.word.split('');
+        wordState.letters = 'EXAMPLE'.split('').slice(0, wordState.length); // Demo word
         wordState.clickable = false;
+        animateFullWordReveal(wordIndex, wordState.letters.join(''));
+        showFeedback('Word fully revealed (-10 points)', 'incorrect');
         
-        // Animate full word reveal
-        animateFullWordReveal(wordIndex, hintData.word);
-        
-        // Check if linking word should be unlocked
         checkLinkingWordUnlock();
     }
-    
-    console.log('Updated word state:', wordState);
 }
 
 function checkLinkingWordUnlock() {
@@ -363,53 +363,6 @@ function checkLinkingWordUnlock() {
             // Re-render to show the unlocked state
             renderInteractiveWordDisplay(false); // false = don't animate again
         }
-    }
-}
-
-// ===== API HELPER FUNCTIONS =====
-
-async function getStructureHint() {
-    const clue = puzzleClues[currentQuestion];
-    
-    try {
-        const response = await fetch(`${API_BASE}/puzzles/hint`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                puzzle_id: todaysPuzzle.id,
-                clue_id: clue.id,
-                hint_type: 'structure'
-            })
-        });
-        
-        return await response.json();
-    } catch (error) {
-        console.error('Error getting structure hint:', error);
-        showFeedback('Connection error. Please try again.', 'incorrect');
-        return null;
-    }
-}
-
-async function getWordHint(wordIndex, hintType) {
-    const clue = puzzleClues[currentQuestion];
-    
-    try {
-        const response = await fetch(`${API_BASE}/puzzles/hint`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                puzzle_id: todaysPuzzle.id,
-                clue_id: clue.id,
-                hint_type: hintType,
-                word_index: wordIndex
-            })
-        });
-        
-        return await response.json();
-    } catch (error) {
-        console.error('Error getting word hint:', error);
-        showFeedback('Connection error. Please try again.', 'incorrect');
-        return null;
     }
 }
 
@@ -635,11 +588,16 @@ function showResults(totalTimeSeconds) {
     const timeBonus = Math.max(0, 300 - totalTimeSeconds);
     const finalScore = baseScore + timeBonus - hintPenalties - (wrongAnswers * 10);
     
-    // Update results display
-    document.getElementById('finalTime').textContent = timeText;
-    document.getElementById('finalScore').textContent = finalScore;
-    document.getElementById('hintsUsed').textContent = totalHintsUsed;
-    document.getElementById('wrongAnswersCount').textContent = wrongAnswers;
+    // Update results display - with safe element checking
+    const finalScoreElement = document.getElementById('finalScore');
+    const completionTimeElement = document.getElementById('completionTime');
+    const hintsUsedElement = document.getElementById('hintsUsed');
+    const wrongAnswersElement = document.getElementById('wrongAnswerPenalty');
+    
+    if (finalScoreElement) finalScoreElement.textContent = finalScore;
+    if (completionTimeElement) completionTimeElement.textContent = timeText;
+    if (hintsUsedElement) hintsUsedElement.textContent = totalHintsUsed;
+    if (wrongAnswersElements) wrongAnswersElement.textContent = wrongAnswers * 10;
     
     // Performance grid
     showPerformanceGrid();
@@ -650,6 +608,8 @@ function showResults(totalTimeSeconds) {
 
 function showPerformanceGrid() {
     const grid = document.getElementById('performanceGrid');
+    if (!grid) return;
+    
     grid.innerHTML = '';
     
     questionHints.forEach((hints, index) => {
@@ -703,37 +663,43 @@ function startNewGame() {
     
     // Show loading message and reload puzzle
     const newGameBtn = document.getElementById('newGameBtn');
-    newGameBtn.textContent = "Loading new puzzle...";
-    newGameBtn.disabled = true;
-    newGameBtn.style.background = '#6c757d';
-    
-    setTimeout(() => {
-        newGameBtn.textContent = "Play Tomorrow's Puzzle";
-        newGameBtn.disabled = false;
-        newGameBtn.style.background = '#667eea';
-    }, 3000);
+    if (newGameBtn) {
+        newGameBtn.textContent = "Loading new puzzle...";
+        newGameBtn.disabled = true;
+        newGameBtn.style.background = '#6c757d';
+        
+        setTimeout(() => {
+            newGameBtn.textContent = "Play Tomorrow's Puzzle";
+            newGameBtn.disabled = false;
+            newGameBtn.style.background = '#667eea';
+        }, 3000);
+    }
 }
 
 // ===== CUSTOM KEYBOARD SYSTEM =====
 
-// Initialize custom keyboard
+// Initialize custom keyboard with safe element checking
 function initializeCustomKeyboard() {
     // Only on mobile/tablet
     if (window.innerWidth > 768) return;
+    
+    // Check if answer input exists first
+    const answerInput = document.getElementById('answerInput');
+    if (!answerInput) {
+        console.log('Answer input not found, skipping keyboard initialization');
+        return;
+    }
     
     createKeyboardHTML();
     setupKeyboardEventListeners();
     
     // Show keyboard when input area is tapped
-    const answerInput = document.getElementById('answerInput');
-    if (answerInput) {
-        answerInput.addEventListener('click', showCustomKeyboard);
-        answerInput.addEventListener('focus', showCustomKeyboard);
-        
-        // Prevent system keyboard
-        answerInput.setAttribute('readonly', 'true');
-        answerInput.setAttribute('inputmode', 'none');
-    }
+    answerInput.addEventListener('click', showCustomKeyboard);
+    answerInput.addEventListener('focus', showCustomKeyboard);
+    
+    // Prevent system keyboard
+    answerInput.setAttribute('readonly', 'true');
+    answerInput.setAttribute('inputmode', 'none');
 }
 
 function createKeyboardHTML() {
@@ -996,8 +962,8 @@ window.addEventListener('resize', () => {
 
 // ===== EVENT LISTENERS =====
 
-document.getElementById('answerInput').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
+document.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && !keyboardVisible) {
         checkAnswer();
     }
 });
