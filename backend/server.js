@@ -54,15 +54,49 @@ app.use((err, req, res, next) => {
   });
 });
 
-// DEBUG: Check what password is being used
-app.get('/api/admin/debug-env', (req, res) => {
-  const newPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
-  res.json({
-    NODE_ENV: process.env.NODE_ENV,
-    HAS_DEFAULT_ADMIN_PASSWORD: !!process.env.DEFAULT_ADMIN_PASSWORD,
-    PASSWORD_LENGTH: newPassword.length,
-    PASSWORD_PREVIEW: newPassword.substring(0, 3) + '***' // First 3 chars for debugging
-  });
+// FORCE: Create new admin with secure password
+app.post('/api/admin/force-new-admin', async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const sqlite3 = require('sqlite3').verbose();
+    const path = require('path');
+    
+    const DB_PATH = path.join(__dirname, 'database.sqlite');
+    const newPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
+    
+    console.log('🔄 Creating new admin with secure password...');
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const db = new sqlite3.Database(DB_PATH);
+    
+    // Delete old admin first, then create new one
+    db.serialize(() => {
+      db.run(`DELETE FROM users WHERE username = 'admin'`, (err) => {
+        if (err) console.log('Note: No existing admin to delete');
+      });
+      
+      db.run(`INSERT INTO users (username, email, password_hash, is_admin) VALUES (?, ?, ?, ?)`,
+        ['admin', 'admin@aftordle.com', hashedPassword, 1],
+        function(err) {
+          db.close();
+          if (err) {
+            console.error('❌ Failed to create admin:', err);
+            res.status(500).json({ error: 'Failed to create admin user' });
+          } else {
+            console.log('✅ New admin created successfully with secure password');
+            res.json({ 
+              success: true, 
+              message: 'New admin created with secure password',
+              userId: this.lastID 
+            });
+          }
+        });
+    });
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+    res.status(500).json({ error: 'Creation failed' });
+  }
 });
 
 // 404 handler
