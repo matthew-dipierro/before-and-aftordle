@@ -637,173 +637,8 @@ body {
     font-size: 0.95rem;
 }
 
-/* ===== MOBILE-FIRST RESPONSIVE DESIGN ===== */
-
-/* Base mobile-first styles (up to 480px) */
-@media (max-width: 480px) {
-    .container {
-        padding: var(--space-sm);
-    }
-    
-    .game-container {
-        padding: var(--space-md);
-        margin: var(--space-sm) 0;
-    }
-    
-    .title {
-        font-size: 1.8rem;
-        margin-bottom: var(--space-md);
-        line-height: 1.2;
-    }
-    
-    .subtitle {
-        font-size: 0.9rem;
-        margin-bottom: var(--space-lg);
-    }
-    
-    /* CRITICAL: Instruction text becomes less prominent */
-    .hint-instruction {
-        font-size: 0.85rem;
-        padding: var(--space-sm) var(--space-md);
-        margin: var(--space-sm) 0;
-        background: var(--bg-secondary);
-        border-radius: var(--radius-small);
-        text-align: center;
-        line-height: 1.4;
-        
-        /* Make it less prominent */
-        opacity: 0.8;
-        border-left: 3px solid var(--primary-blue);
-    }
-    
-    /* GAME BOARD: Stack word groups vertically on mobile */
-    .letter-boxes {
-        flex-direction: column;
-        align-items: stretch;
-        gap: var(--space-sm);
-        font-size: 1.1rem;
-    }
-    
-    .word-group {
-        justify-content: center;
-        gap: 2px;
-        padding: var(--space-xs) var(--space-sm);
-        border-radius: var(--radius-small);
-        
-        /* Better touch targets */
-        min-height: 48px;
-        display: flex;
-        align-items: center;
-        
-        /* Visual feedback for touch */
-        background: rgba(0, 122, 255, 0.03);
-        border: 1px solid rgba(0, 122, 255, 0.1);
-        margin: 2px 0;
-    }
-    
-    .word-group.clickable-word {
-        background: rgba(0, 122, 255, 0.05);
-        border-color: rgba(0, 122, 255, 0.2);
-    }
-    
-    .word-group.clickable-word:active {
-        background: rgba(0, 122, 255, 0.1);
-        transform: scale(0.98);
-    }
-    
-    /* LETTER BOXES: Smaller but still readable */
-    .letter-box {
-        width: 24px;
-        height: 32px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        border-width: 1px;
-        border-radius: 4px;
-    }
-    
-    /* Linking word groups get special treatment */
-    .word-group.linking-word-group {
-        background: var(--linking-secondary);
-        border-color: var(--linking-primary);
-    }
-    
-    .word-group.linking-word-group.clickable-word {
-        background: rgba(255, 149, 0, 0.1);
-        border-color: var(--linking-primary);
-    }
-    
-    /* QUESTION SECTION: More compact */
-    .question-number {
-        font-size: 1rem;
-        margin-bottom: var(--space-xs);
-    }
-    
-    .clue {
-        font-size: 1rem;
-        padding: var(--space-md);
-        margin-bottom: var(--space-md);
-        line-height: 1.4;
-    }
-    
-    /* INPUT SECTION: Better mobile UX */
-    .answer-input {
-        font-size: 1rem;
-        padding: var(--space-md);
-        border-radius: var(--radius-small);
-        
-        /* Prevent zoom on iOS */
-        font-size: 16px;
-    }
-    
-    /* CONTROLS: Larger touch targets */
-    .hint-btn {
-        padding: var(--space-md) var(--space-lg);
-        font-size: 0.95rem;
-        min-height: 44px;
-        border-radius: var(--radius-small);
-    }
-    
-    .new-game-btn {
-        padding: var(--space-md) var(--space-lg);
-        font-size: 1rem;
-        min-height: 44px;
-        width: 100%;
-    }
-    
-    /* ANSWER DISPLAY: More compact */
-    .answer-display {
-        min-height: 60px;
-        padding: var(--space-md);
-        margin: var(--space-md) 0;
-    }
-    
-    .empty-message {
-        font-size: 0.9rem;
-    }
-    
-    /* PROGRESS AND STATS: Simplified */
-    .performance-dot {
-        width: 24px;
-        height: 24px;
-        font-size: 0.8rem;
-    }
-    
-    .stats {
-        padding: var(--space-sm);
-        margin-top: var(--space-md);
-    }
-    
-    .stats h3 {
-        font-size: 1rem;
-    }
-    
-    .stats div {
-        font-size: 0.85rem;
-    }
-}
-
-/* Tablet styles (481px to 768px) */
-@media (min-width: 481px) and (max-width: 768px) {
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
     .container {
         padding: var(--space-md);
     }
@@ -813,390 +648,61 @@ body {
     }
     
     .title {
-        font-size: 2.2rem;
-    }
-    
-    /* Hybrid layout: 2 word groups per row max */
-    .letter-boxes {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: var(--space-md);
-        justify-items: center;
-    }
-    
-    .word-group {
-        min-width: 180px;
-        justify-content: center;
-        padding: var(--space-xs);
-        min-height: 44px;
+        font-size: 2rem;
     }
     
     .letter-box {
-        width: 28px;
-        height: 36px;
-        font-size: 0.95rem;
+        width: 32px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    .letter-boxes {
+        gap: var(--space-sm);
+    }
+    
+    .word-group {
+        gap: 2px;
     }
     
     .clue {
         font-size: 1.1rem;
+        padding: var(--space-md);
     }
     
     .performance-dot {
-        width: 26px;
-        height: 26px;
-        font-size: 0.85rem;
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
     }
 }
 
-/* Desktop styles (769px and up) - keep existing */
-@media (min-width: 769px) {
-    /* Keep current desktop styles */
-    .letter-boxes {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: var(--space-md);
+@media (max-width: 480px) {
+    .letter-box {
+        width: 28px;
+        height: 36px;
+        font-size: 0.9rem;
     }
     
-    .letter-box {
-        width: 40px;
-        height: 48px;
-        font-size: 1.2rem;
+    .letter-boxes {
+        gap: var(--space-xs);
+    }
+    
+    .word-group {
+        gap: 1px;
+    }
+    
+    .answer-input {
+        font-size: 1rem;
+    }
+    
+    .hint-btn {
+        padding: var(--space-xs) var(--space-md);
+        font-size: 0.9rem;
     }
 }
 
 /* ===== GAME SCREEN VISIBILITY ===== */
 .game-screen {
     display: none;
-}
-
-/* ===== CUSTOM MOBILE KEYBOARD ===== */
-
-/* Hide system keyboard on mobile */
-@media (max-width: 768px) {
-    .answer-input {
-        /* Prevent system keyboard on mobile */
-        pointer-events: none;
-        cursor: default;
-        
-        /* Visual feedback that it's not directly editable */
-        background: var(--bg-secondary);
-        border: 2px solid var(--bg-tertiary);
-    }
-    
-    .answer-input:focus {
-        /* Remove focus styles since we're handling input differently */
-        border-color: var(--bg-tertiary);
-        box-shadow: none;
-    }
-}
-
-/* ===== CUSTOM KEYBOARD CONTAINER ===== */
-.custom-keyboard {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: var(--bg-secondary);
-    border-top: 1px solid var(--bg-tertiary);
-    padding: var(--space-md) var(--space-md) calc(var(--space-md) + env(safe-area-inset-bottom));
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    
-    /* Start hidden */
-    transform: translateY(100%);
-    transition: transform 0.3s var(--spring-smooth);
-}
-
-.custom-keyboard.visible {
-    transform: translateY(0);
-}
-
-/* ===== ANSWER INPUT DISPLAY ===== */
-.keyboard-input-display {
-    background: var(--bg-primary);
-    border: 2px solid var(--primary-blue);
-    border-radius: var(--radius-medium);
-    padding: var(--space-md);
-    margin-bottom: var(--space-md);
-    text-align: center;
-    font-size: 1.1rem;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    min-height: 52px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    box-shadow: var(--shadow-small);
-}
-
-.keyboard-input-display.empty {
-    color: var(--text-secondary);
-    border-color: var(--bg-tertiary);
-    font-style: italic;
-    font-weight: 400;
-    letter-spacing: normal;
-}
-
-.keyboard-input-display.empty::before {
-    content: 'Type your answer...';
-}
-
-/* Cursor effect */
-.keyboard-input-display:not(.empty)::after {
-    content: '';
-    display: inline-block;
-    width: 2px;
-    height: 1.2em;
-    background: var(--primary-blue);
-    margin-left: 4px;
-    animation: blink 1s infinite;
-}
-
-@keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
-}
-
-/* ===== KEYBOARD LAYOUT ===== */
-.keyboard-grid {
-    display: grid;
-    gap: var(--space-xs);
-    max-width: 400px;
-    margin: 0 auto;
-}
-
-/* Letter rows */
-.keyboard-row {
-    display: grid;
-    gap: var(--space-xs);
-    justify-content: center;
-}
-
-.keyboard-row.row-1 {
-    grid-template-columns: repeat(10, 1fr);
-}
-
-.keyboard-row.row-2 {
-    grid-template-columns: repeat(9, 1fr);
-    margin: 0 5%;
-}
-
-.keyboard-row.row-3 {
-    grid-template-columns: repeat(7, 1fr);
-    margin: 0 10%;
-}
-
-/* Action row */
-.keyboard-actions {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
-    gap: var(--space-xs);
-    margin-top: var(--space-sm);
-}
-
-/* ===== KEY STYLES ===== */
-.key {
-    background: var(--bg-primary);
-    border: 1px solid var(--bg-tertiary);
-    border-radius: var(--radius-small);
-    padding: var(--space-md) var(--space-xs);
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    text-transform: uppercase;
-    cursor: pointer;
-    user-select: none;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.1s ease;
-    box-shadow: var(--shadow-small);
-    
-    /* Subtle texture */
-    background: linear-gradient(180deg, var(--bg-primary) 0%, #F8F8F8 100%);
-}
-
-.key:active {
-    transform: scale(0.95);
-    background: var(--bg-secondary);
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Special keys */
-.key.spacebar {
-    background: var(--primary-blue);
-    color: white;
-    font-size: 0.9rem;
-    font-weight: 500;
-    letter-spacing: 1px;
-}
-
-.key.spacebar:active {
-    background: #0056b3;
-}
-
-.key.backspace {
-    background: #FF3B30;
-    color: white;
-    font-size: 0.9rem;
-}
-
-.key.backspace:active {
-    background: #D70015;
-}
-
-.key.enter {
-    background: #34C759;
-    color: white;
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-.key.enter:active {
-    background: #248A3D;
-}
-
-.key.enter:disabled {
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    cursor: not-allowed;
-}
-
-.key.enter:disabled:active {
-    transform: none;
-    background: var(--bg-tertiary);
-}
-
-/* ===== RESPONSIVE KEYBOARD ===== */
-@media (max-width: 380px) {
-    .custom-keyboard {
-        padding: var(--space-sm) var(--space-sm) calc(var(--space-sm) + env(safe-area-inset-bottom));
-    }
-    
-    .keyboard-input-display {
-        font-size: 1rem;
-        padding: var(--space-sm);
-        min-height: 48px;
-    }
-    
-    .key {
-        font-size: 0.9rem;
-        padding: var(--space-sm) var(--space-xs);
-        min-height: 40px;
-    }
-    
-    .keyboard-row.row-2 {
-        margin: 0 3%;
-    }
-    
-    .keyboard-row.row-3 {
-        margin: 0 8%;
-    }
-}
-
-@media (max-width: 320px) {
-    .key {
-        font-size: 0.85rem;
-        min-height: 38px;
-    }
-    
-    .keyboard-actions {
-        grid-template-columns: 1.8fr 1fr 1fr;
-    }
-}
-
-/* ===== HIDE KEYBOARD ON DESKTOP ===== */
-@media (min-width: 769px) {
-    .custom-keyboard {
-        display: none;
-    }
-    
-    /* Restore normal input behavior on desktop */
-    .answer-input {
-        pointer-events: auto;
-        cursor: text;
-        background: var(--bg-primary);
-        border: 2px solid var(--bg-tertiary);
-    }
-    
-    .answer-input:focus {
-        border-color: var(--primary-blue);
-        box-shadow: 0 0 0 3px var(--primary-blue-secondary);
-    }
-}
-
-/* ===== KEYBOARD ACCESSIBILITY ===== */
-.key:focus {
-    outline: 2px solid var(--primary-blue);
-    outline-offset: 2px;
-}
-
-/* Haptic feedback simulation */
-.key.pressed {
-    animation: keyPress 0.1s ease;
-}
-
-@keyframes keyPress {
-    0% { transform: scale(1); }
-    50% { transform: scale(0.95); }
-    100% { transform: scale(1); }
-}
-
-/* ===== BODY ADJUSTMENTS WHEN KEYBOARD IS OPEN ===== */
-body.keyboard-open {
-    /* Prevent scrolling issues */
-    overflow-x: hidden;
-}
-
-body.keyboard-open .container {
-    /* Add bottom padding to account for keyboard */
-    padding-bottom: 280px;
-}
-
-/* Smooth keyboard transitions */
-.custom-keyboard * {
-    -webkit-tap-highlight-color: transparent;
-}
-
-/* Better visual hierarchy when keyboard is open */
-body.keyboard-open .game-container {
-    /* Ensure game content is above keyboard visually */
-    position: relative;
-    z-index: 999;
-}
-
-/* ===== ACCESSIBILITY IMPROVEMENTS ===== */
-@media (prefers-reduced-motion: reduce) {
-    .letter-box {
-        transition: none;
-    }
-    
-    .word-group {
-        transition: none;
-    }
-    
-    .letter-box.revealing {
-        animation: none;
-    }
-}
-
-/* Better focus states for keyboard navigation */
-.word-group:focus {
-    outline: 2px solid var(--primary-blue);
-    outline-offset: 2px;
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .letter-box {
-        border-width: 2px;
-    }
-    
-    .word-group {
-        border-width: 2px;
-    }
 }
