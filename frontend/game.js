@@ -72,7 +72,7 @@ function showError(message) {
             <p style="margin-top: 10px;">Make sure your backend server is running:</p>
             <code style="background: #fff; padding: 5px; border-radius: 3px; display: block; margin: 10px 0;">cd backend && npm run dev</code>
         </div>
-        <button class="start-btn" onclick="loadTodaysPuzzle()" style="background: #6c757d;">🔄 Retry Connection</button>
+        <button class="start-btn" onclick="loadTodaysPuzzle()" style="background: #6c757d;">ðŸ”„ Retry Connection</button>
     `;
 }
 
@@ -210,8 +210,9 @@ async function checkAnswer() {
         if (result.correct) {
             showFeedback(`Correct! Answer: ${result.full_answer}`, 'correct');
             
-            if (result.full_answer && result.linking_word) {
-                setTimeout(() => showCompleteAnswer(result.full_answer, result.linking_word), 500);
+            // If structure is revealed, complete all remaining letters
+            if (isStructureRevealed() && result.full_answer) {
+                setTimeout(() => revealCompleteAnswer(result.full_answer), 500);
             }
             
             setTimeout(() => {
@@ -481,6 +482,39 @@ function showCompleteAnswer(answer, linkingWord) {
     display.innerHTML = html;
 }
 
+function revealCompleteAnswer(fullAnswer) {
+    const currentWordStates = getCurrentWordStates();
+    const words = fullAnswer.split(' ');
+    
+    // Update word states and animate remaining letters
+    currentWordStates.forEach((wordState, wordIndex) => {
+        const word = words[wordIndex];
+        if (word) {
+            // Reveal any remaining blank letters
+            for (let letterIndex = 0; letterIndex < word.length; letterIndex++) {
+                if (wordState.letters[letterIndex] === '_') {
+                    wordState.letters[letterIndex] = word[letterIndex];
+                    // Animate the letter reveal with a stagger
+                    setTimeout(() => {
+                        animateLetterReveal(wordIndex, letterIndex);
+                    }, letterIndex * 50); // 50ms stagger between letters
+                }
+            }
+            wordState.state = 'complete';
+            wordState.clickable = false;
+        }
+    });
+    
+    // Update instruction text
+    setTimeout(() => {
+        const instructionDiv = document.querySelector('.hint-instruction');
+        if (instructionDiv) {
+            instructionDiv.textContent = 'Answer complete! Moving to next question...';
+            instructionDiv.style.color = 'var(--success-text, #2d5a2d)';
+        }
+    }, words.join('').length * 50 + 200); // Wait for all letters to animate
+}
+
 // ===== ANIMATION SYSTEM - SIMPLE & RELIABLE =====
 
 function animateBoxMaterialization() {
@@ -658,7 +692,7 @@ async function showResults() {
             dot.classList.add('heavy-struggle');
         }
         
-        dot.textContent = '✓';
+        dot.textContent = 'âœ“';
         dot.title = `Question ${i+1}: ${summary.hintsUsed} hints used (-${summary.totalPenalty} points)`;
         grid.appendChild(dot);
     }
