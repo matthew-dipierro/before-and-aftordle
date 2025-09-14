@@ -490,15 +490,6 @@ body {
     box-shadow: none;
 }
 
-/* Hint Instructions */
-.hint-instruction {
-    text-align: center;
-    margin-top: var(--space-md);
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    font-weight: 400;
-}
-
 /* ===== FEEDBACK SYSTEM ===== */
 .feedback {
     text-align: center;
@@ -534,6 +525,17 @@ body {
     font-size: 0.9rem;
     opacity: 0;
     animation: fadeInMessage 0.3s ease-out forwards;
+}
+
+@keyframes fadeInMessage {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .celebration-message {
@@ -581,17 +583,6 @@ body {
     100% {
         opacity: 1;
         transform: scale(1) translateY(0);
-    }
-}
-
-@keyframes fadeInMessage {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
     }
 }
 
