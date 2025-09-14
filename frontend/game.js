@@ -72,7 +72,7 @@ function showError(message) {
             <p style="margin-top: 10px;">Make sure your backend server is running:</p>
             <code style="background: #fff; padding: 5px; border-radius: 3px; display: block; margin: 10px 0;">cd backend && npm run dev</code>
         </div>
-        <button class="start-btn" onclick="loadTodaysPuzzle()" style="background: #6c757d;">ðŸ”„ Retry Connection</button>
+        <button class="start-btn" onclick="loadTodaysPuzzle()" style="background: #6c757d;">🔄 Retry Connection</button>
     `;
 }
 
@@ -421,11 +421,6 @@ function renderInteractiveWordDisplay() {
     
     html += '</div>';
     
-    const instructionText = getInstructionText();
-    if (instructionText) {
-        html += `<div class="hint-instruction">${instructionText}</div>`;
-    }
-    
     display.innerHTML = html;
     
     // Only animate boxes on first render (structure reveal)
@@ -442,49 +437,6 @@ function renderInteractiveWordDisplay() {
         state: w.state,
         is_linking: w.is_linking
     })));
-}
-
-function getInstructionText() {
-    const currentWordStates = getCurrentWordStates();
-    if (!currentWordStates) return '';
-    
-    const clickableNonLinking = currentWordStates.filter(word => word.clickable && !word.is_linking);
-    const linkingWord = currentWordStates.find(word => word.is_linking);
-    
-    // Check if linking word is fully revealed
-    if (linkingWord && linkingWord.state === 'full_word') {
-        return 'All hints used!';
-    }
-    
-    if (clickableNonLinking.length > 0) {
-        return 'Tap word groups to reveal letters progressively';
-    } else if (linkingWord && linkingWord.clickable) {
-        return 'The linking word may now be revealed';
-    } else {
-        return 'All available hints revealed';
-    }
-}
-
-function showCompleteAnswer(answer, linkingWord) {
-    const display = document.getElementById('answerDisplay');
-    const words = answer.split(' ');
-    const linkIndex = words.findIndex(word => word === linkingWord);
-    
-    let html = '<div class="letter-boxes">';
-    
-    words.forEach((word, wordIndex) => {
-        const isLinking = wordIndex === linkIndex;
-        html += `<div class="word-group${isLinking ? ' linking-word-group' : ''}">`;
-        
-        for (let i = 0; i < word.length; i++) {
-            html += `<div class="letter-box filled${isLinking ? ' linking-word' : ''}">${word[i]}</div>`;
-        }
-        
-        html += '</div>';
-    });
-    
-    html += '</div><div class="hint-instruction">Answer complete. Proceeding to next question...</div>';
-    display.innerHTML = html;
 }
 
 function revealCompleteAnswer(fullAnswer) {
@@ -514,16 +466,6 @@ function revealCompleteAnswer(fullAnswer) {
             wordState.clickable = false;
         }, wordDelay);
     });
-    
-    // Update instruction text after all words are revealed
-    const totalDelay = words.length * 300 + Math.max(...words.map(w => w.length)) * 60;
-    setTimeout(() => {
-        const instructionDiv = document.querySelector('.hint-instruction');
-        if (instructionDiv) {
-            instructionDiv.textContent = 'Answer complete! Moving to next question...';
-            instructionDiv.style.color = 'var(--success-text, #2d5a2d)';
-        }
-    }, totalDelay);
 }
 
 function showCelebrationAnswer(fullAnswer, linkingWord) {
@@ -549,9 +491,27 @@ function showCelebrationAnswer(fullAnswer, linkingWord) {
         html += '</div>';
     });
     
-    // Calculate when to show celebration message (after all letters are revealed)
-    const totalAnimationTime = (words.length * 300) + (Math.max(...words.map(w => w.length)) * 60);
-    html += `<div class="celebration-message" style="animation-delay: ${totalAnimationTime + 200}ms">Perfect! Solved without hints! 🎉</div>`;
+    html += '</div>';
+    display.innerHTML = html;
+}
+
+function showCompleteAnswer(answer, linkingWord) {
+    const display = document.getElementById('answerDisplay');
+    const words = answer.split(' ');
+    const linkIndex = words.findIndex(word => word === linkingWord);
+    
+    let html = '<div class="letter-boxes">';
+    
+    words.forEach((word, wordIndex) => {
+        const isLinking = wordIndex === linkIndex;
+        html += `<div class="word-group${isLinking ? ' linking-word-group' : ''}">`;
+        
+        for (let i = 0; i < word.length; i++) {
+            html += `<div class="letter-box filled${isLinking ? ' linking-word' : ''}">${word[i]}</div>`;
+        }
+        
+        html += '</div>';
+    });
     
     html += '</div>';
     display.innerHTML = html;
@@ -734,7 +694,7 @@ async function showResults() {
             dot.classList.add('heavy-struggle');
         }
         
-        dot.textContent = 'âœ“';
+        dot.textContent = '✓';
         dot.title = `Question ${i+1}: ${summary.hintsUsed} hints used (-${summary.totalPenalty} points)`;
         grid.appendChild(dot);
     }
