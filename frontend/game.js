@@ -59,8 +59,29 @@ async function loadTodaysPuzzle() {
 function updateIntroScreen() {
     const subtitle = document.querySelector('.subtitle');
     if (todaysPuzzle) {
-        subtitle.textContent = `Daily word puzzle - ${puzzleClues.length} clues ready!`;
+        const puzzleNumber = getPuzzleNumber(todaysPuzzle.date);
+        const formattedDate = formatDate(todaysPuzzle.date);
+        subtitle.innerHTML = `No. ${puzzleNumber} - ${formattedDate}<br><span class="byline">by Matthew DiPierro</span>`;
     }
+}
+
+function getPuzzleNumber(dateString) {
+    // Calculate puzzle number based on days since game launch
+    // Using September 10, 2025 as day 1 for example
+    const launchDate = new Date('2025-09-10');
+    const puzzleDate = new Date(dateString);
+    const daysDiff = Math.floor((puzzleDate - launchDate) / (1000 * 60 * 60 * 24)) + 1;
+    return Math.max(1, daysDiff);
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+        weekday: 'long',
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
 }
 
 function showError(message) {
