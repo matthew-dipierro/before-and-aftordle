@@ -491,33 +491,39 @@ function revealCompleteAnswer(fullAnswer) {
     const currentWordStates = getCurrentWordStates();
     const words = fullAnswer.split(' ');
     
-    // Update word states and animate remaining letters
-    currentWordStates.forEach((wordState, wordIndex) => {
-        const word = words[wordIndex];
-        if (word) {
-            // Reveal any remaining blank letters
+    // Reveal words sequentially
+    words.forEach((word, wordIndex) => {
+        const wordState = currentWordStates[wordIndex];
+        if (!word || !wordState) return;
+        
+        // Calculate delay for this word (previous words complete first)
+        const wordDelay = wordIndex * 300; // 300ms between word starts
+        
+        setTimeout(() => {
+            // Reveal any remaining blank letters in this word
             for (let letterIndex = 0; letterIndex < word.length; letterIndex++) {
                 if (wordState.letters[letterIndex] === '_') {
                     wordState.letters[letterIndex] = word[letterIndex];
-                    // Animate the letter reveal with a stagger
+                    // Animate with stagger within the word
                     setTimeout(() => {
                         animateLetterReveal(wordIndex, letterIndex);
-                    }, letterIndex * 50); // 50ms stagger between letters
+                    }, letterIndex * 60); // 60ms stagger between letters in same word
                 }
             }
             wordState.state = 'complete';
             wordState.clickable = false;
-        }
+        }, wordDelay);
     });
     
-    // Update instruction text
+    // Update instruction text after all words are revealed
+    const totalDelay = words.length * 300 + Math.max(...words.map(w => w.length)) * 60;
     setTimeout(() => {
         const instructionDiv = document.querySelector('.hint-instruction');
         if (instructionDiv) {
             instructionDiv.textContent = 'Answer complete! Moving to next question...';
             instructionDiv.style.color = 'var(--success-text, #2d5a2d)';
         }
-    }, words.join('').length * 50 + 200); // Wait for all letters to animate
+    }, totalDelay);
 }
 
 function showCelebrationAnswer(fullAnswer, linkingWord) {
@@ -533,15 +539,21 @@ function showCelebrationAnswer(fullAnswer, linkingWord) {
         
         html += `<div class="${groupClass}">`;
         
-        for (let i = 0; i < word.length; i++) {
+        for (let letterIndex = 0; letterIndex < word.length; letterIndex++) {
             const letterClass = isLinking ? 'letter-box filled linking-word celebration-letter' : 'letter-box filled celebration-letter';
-            html += `<div class="${letterClass}" style="animation-delay: ${(wordIndex * word.length + i) * 60}ms">${word[i]}</div>`;
+            // Calculate delay: word starts at wordIndex * 300ms, letters within word at 60ms intervals
+            const animationDelay = (wordIndex * 300) + (letterIndex * 60);
+            html += `<div class="${letterClass}" style="animation-delay: ${animationDelay}ms">${word[letterIndex]}</div>`;
         }
         
         html += '</div>';
     });
     
-    html += '</div><div class="celebration-message">Perfect! Solved without hints! 🎉</div>';
+    // Calculate when to show celebration message (after all letters are revealed)
+    const totalAnimationTime = (words.length * 300) + (Math.max(...words.map(w => w.length)) * 60);
+    html += `<div class="celebration-message" style="animation-delay: ${totalAnimationTime + 200}ms">Perfect! Solved without hints! 🎉</div>`;
+    
+    html += '</div>';
     display.innerHTML = html;
 }
 
