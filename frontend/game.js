@@ -131,7 +131,7 @@ function updateDisplay() {
 
 function showEmptyState() {
     const display = document.getElementById('answerDisplay');
-    display.innerHTML = '<div class="empty-message">Reveal the word structure to begin solving this clue</div>';
+    display.innerHTML = '<div class="empty-message">Type your answer below, or use hints if needed</div>';
 }
 
 // ===== API CALLS =====
