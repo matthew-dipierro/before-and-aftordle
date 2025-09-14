@@ -210,9 +210,14 @@ async function checkAnswer() {
         if (result.correct) {
             showFeedback(`Correct! Answer: ${result.full_answer}`, 'correct');
             
-            // If structure is revealed, complete all remaining letters
-            if (isStructureRevealed() && result.full_answer) {
-                setTimeout(() => revealCompleteAnswer(result.full_answer), 500);
+            if (result.full_answer) {
+                if (isStructureRevealed()) {
+                    // Complete any remaining letters in the existing structure
+                    setTimeout(() => revealCompleteAnswer(result.full_answer), 500);
+                } else {
+                    // Show complete answer celebration for solving without hints
+                    setTimeout(() => showCelebrationAnswer(result.full_answer, result.linking_word), 500);
+                }
             }
             
             setTimeout(() => {
@@ -513,6 +518,31 @@ function revealCompleteAnswer(fullAnswer) {
             instructionDiv.style.color = 'var(--success-text, #2d5a2d)';
         }
     }, words.join('').length * 50 + 200); // Wait for all letters to animate
+}
+
+function showCelebrationAnswer(fullAnswer, linkingWord) {
+    const display = document.getElementById('answerDisplay');
+    const words = fullAnswer.split(' ');
+    const linkIndex = words.findIndex(word => word === linkingWord);
+    
+    let html = '<div class="letter-boxes celebration-reveal">';
+    
+    words.forEach((word, wordIndex) => {
+        const isLinking = wordIndex === linkIndex;
+        const groupClass = isLinking ? 'word-group linking-word-group celebration' : 'word-group celebration';
+        
+        html += `<div class="${groupClass}">`;
+        
+        for (let i = 0; i < word.length; i++) {
+            const letterClass = isLinking ? 'letter-box filled linking-word celebration-letter' : 'letter-box filled celebration-letter';
+            html += `<div class="${letterClass}" style="animation-delay: ${(wordIndex * word.length + i) * 60}ms">${word[i]}</div>`;
+        }
+        
+        html += '</div>';
+    });
+    
+    html += '</div><div class="celebration-message">Perfect! Solved without hints! 🎉</div>';
+    display.innerHTML = html;
 }
 
 // ===== ANIMATION SYSTEM - SIMPLE & RELIABLE =====
