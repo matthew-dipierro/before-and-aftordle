@@ -9,7 +9,26 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1 class="title">Phrasey Chain</h1>
+            <div class="logo">
+                <svg width="400" height="120" viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Phrasey text -->
+                  <text x="50" y="75" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" 
+                        font-size="48" font-weight="700" letter-spacing="-0.96" fill="#007AFF">Phrasey</text>
+                  
+                  <!-- Left circle (blue) -->
+                  <circle cx="190" cy="60" r="13" fill="none" stroke="#007AFF" stroke-width="5"/>
+                  
+                  <!-- Center circle (gray) -->
+                  <circle cx="206" cy="60" r="18" fill="none" stroke="#6c757d" stroke-width="5"/>
+                  
+                  <!-- Right circle (orange) -->
+                  <circle cx="222" cy="60" r="13" fill="none" stroke="#FF9500" stroke-width="5"/>
+                  
+                  <!-- Chain text -->
+                  <text x="255" y="75" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" 
+                        font-size="48" font-weight="700" letter-spacing="-0.96" fill="#FF9500">Chain</text>
+                </svg>
+            </div>
             <p class="subtitle">Daily word puzzle game</p>
         </div>
         
@@ -32,6 +51,7 @@
                                 <li>Solve 5 phrase chains in sequence</li>
                                 <li>Type your answer and press Enter</li>
                                 <li>Use hints if needed, but they'll lower your score</li>
+                                <li>Try to get 100/100 points!</li>
                             </ul>
                         </div>
                     </div>
@@ -53,7 +73,7 @@
                     <div class="question-number" id="questionNumber">Question 1 of 5</div>
                     <div class="clue" id="clue"></div>
                     <div class="answer-display" id="answerDisplay">
-                        <div class="empty-message">Use a hint to reveal word structure</div>
+                        <div class="empty-message">Type your answer below, or use hints if needed</div>
                     </div>
                 </div>
                 
@@ -70,34 +90,33 @@
             
             <!-- Results Screen -->
             <div class="results-screen" id="resultsScreen">
-                <h2 class="results-title">Phrasey Chain Complete!</h2>
+                <h2 class="results-title">Puzzle Complete!</h2>
                 
                 <div class="performance-grid" id="performanceGrid"></div>
                 
                 <div class="final-score">
-                    <div><strong>Score: <span id="finalScore"></span></strong></div>
+                    Score: <span id="finalScore">85/100</span>
                 </div>
                 
                 <div class="score-breakdown">
-                    <div>Completion time: <span id="completionTime"></span></div>
-                    <div>Wrong answers: -<span id="wrongAnswerPenalty"></span> points</div>
-                    <div>Hint penalties: -<span id="hintPenalty"></span> points</div>
-                    <div>Total penalties: -<span id="totalPenalties"></span> points</div>
-                    <div>Streak: <span id="streak"></span> days</div>
+                    <div>Completion time: <span id="completionTime">3:45</span></div>
+                    <div>Wrong answer penalty: -<span id="wrongAnswerPenalty">4</span> points</div>
+                    <div>Hint penalty: -<span id="hintPenalty">11</span> points</div>
+                    <div>Total penalties: -<span id="totalPenalties">15</span> points</div>
                 </div>
-                
-                <button class="new-game-btn" onclick="startNewGame()">Play Tomorrow's Puzzle</button>
                 
                 <div class="stats">
                     <h3>Your Stats</h3>
-                    <div>Games played: <span id="gamesPlayed"></span></div>
-                    <div>Current streak: <span id="currentStreak"></span></div>
-                    <div>Best score: <span id="bestScore"></span></div>
+                    <div>Games played: <span id="gamesPlayed">12</span></div>
+                    <div>Current streak: <span id="currentStreak">3</span></div>
+                    <div>Best score: <span id="bestScore">95/100</span></div>
                 </div>
+                
+                <button class="new-game-btn" onclick="startNewGame()">Play Tomorrow's Puzzle</button>
             </div>
         </div>
     </div>
-
+    
     <script src="game.js"></script>
 </body>
 </html>
