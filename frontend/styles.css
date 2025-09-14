@@ -87,13 +87,13 @@ body {
     margin-bottom: var(--space-xl);
 }
 
-.title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    text-shadow: none;
+.logo {
     margin-bottom: var(--space-sm);
-    letter-spacing: -0.02em;
+}
+
+.logo svg {
+    max-width: 100%;
+    height: auto;
 }
 
 .subtitle {
@@ -719,8 +719,9 @@ body {
         padding: var(--space-lg);
     }
     
-    .title {
-        font-size: 2rem;
+    .logo svg {
+        width: 300px;
+        height: 90px;
     }
     
     .letter-box {
@@ -750,6 +751,11 @@ body {
 }
 
 @media (max-width: 480px) {
+    .logo svg {
+        width: 250px;
+        height: 75px;
+    }
+    
     .letter-box {
         width: 28px;
         height: 36px;
