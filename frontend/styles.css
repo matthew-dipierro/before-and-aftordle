@@ -194,20 +194,28 @@ body {
     margin-bottom: var(--space-md);
 }
 
-.progress-bar {
-    width: 100%;
+.progress-segments {
+    display: flex;
+    gap: 8px;
+    margin: var(--space-lg) 0;
+    justify-content: center;
+}
+
+.segment {
+    width: 60px;
     height: 6px;
     background: var(--bg-tertiary);
     border-radius: 3px;
-    margin: var(--space-lg) 0;
-    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--primary-blue), #5856D6);
-    border-radius: 3px;
-    transition: width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+.segment.completed {
+    background: var(--primary-blue);
+}
+
+.segment.current {
+    background: rgba(0, 122, 255, 0.4);
+    transform: scaleY(1.5);
 }
 
 .question-section {
