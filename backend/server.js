@@ -36,6 +36,25 @@ app.use(express.static('public'));
 app.use('/api/puzzles', puzzleRoutes);
 app.use('/api/admin', adminRoutes);
 
+// TEMPORARY MIGRATION ROUTE - Add this after your existing routes
+app.get('/run-clue-library-migration', async (req, res) => {
+  try {
+    const { addClueLibrary } = require('./scripts/add-clue-library');
+    await addClueLibrary();
+    res.json({ 
+      success: true, 
+      message: 'Clue library migration completed successfully!',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
