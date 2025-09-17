@@ -633,8 +633,20 @@ function showFeedback(message, type) {
 }
 
 function updateProgress() {
-    const progress = (currentQuestion / puzzleClues.length) * 100;
-    document.getElementById('progress').style.width = progress + '%';
+    const segments = document.querySelectorAll('.segment');
+    
+    segments.forEach((segment, index) => {
+        segment.classList.remove('completed', 'current');
+        
+        if (index < currentQuestion) {
+            // Questions already completed
+            segment.classList.add('completed');
+        } else if (index === currentQuestion) {
+            // Current question
+            segment.classList.add('current');
+        }
+        // Remaining segments stay grey (no class)
+    });
 }
 
 function startTimer() {
