@@ -215,6 +215,8 @@ body {
 
 .segment.current {
     background: rgba(0, 122, 255, 0.4);
+    transform: none;
+    height: 6px;
 }
 
 .question-section {
