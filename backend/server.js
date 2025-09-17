@@ -7,6 +7,9 @@ require('dotenv').config();
 const puzzleRoutes = require('./routes/puzzles');
 const adminRoutes = require('./routes/admin');
 
+const clueLibraryRoutes = require('./routes/clue-library');
+const aiClueRoutes = require('./routes/ai-clue-generator');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -35,6 +38,9 @@ app.use(express.static('public'));
 // API Routes
 app.use('/api/puzzles', puzzleRoutes);
 app.use('/api/admin', adminRoutes);
+
+app.use('/api/clue-library', clueLibraryRoutes);
+app.use('/api/ai-clue-generator', aiClueRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
