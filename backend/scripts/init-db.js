@@ -8,39 +8,7 @@ async function initDatabase() {
   try {
     console.log('🔦 Connected to PostgreSQL database');
 
-    // Create daily_puzzles table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS daily_puzzles (
-        id SERIAL PRIMARY KEY,
-        date DATE UNIQUE NOT NULL,
-        difficulty INTEGER DEFAULT 1,
-        is_active BOOLEAN DEFAULT true,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_by INTEGER,
-        plays INTEGER DEFAULT 0,
-        avg_score REAL DEFAULT 0,
-        avg_time INTEGER DEFAULT 0,
-        FOREIGN KEY (created_by) REFERENCES users (id)
-      )
-    `);
-    console.log('✅ Daily puzzles table ready');
-
-    // Create puzzle_clues table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS puzzle_clues (
-        id SERIAL PRIMARY KEY,
-        daily_puzzle_id INTEGER NOT NULL,
-        clue_number INTEGER NOT NULL,
-        clue TEXT NOT NULL,
-        answer TEXT NOT NULL,
-        linking_word TEXT NOT NULL,
-        FOREIGN KEY (daily_puzzle_id) REFERENCES daily_puzzles (id) ON DELETE CASCADE,
-        UNIQUE(daily_puzzle_id, clue_number)
-      )
-    `);
-    console.log('✅ Puzzle clues table ready');
-
-    // Create users table
+    // Create users table FIRST (other tables reference it)
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -58,6 +26,38 @@ async function initDatabase() {
       )
     `);
     console.log('✅ Users table ready');
+
+    // Create daily_puzzles table (references users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS daily_puzzles (
+        id SERIAL PRIMARY KEY,
+        date DATE UNIQUE NOT NULL,
+        difficulty INTEGER DEFAULT 1,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        plays INTEGER DEFAULT 0,
+        avg_score REAL DEFAULT 0,
+        avg_time INTEGER DEFAULT 0,
+        FOREIGN KEY (created_by) REFERENCES users (id)
+      )
+    `);
+    console.log('✅ Daily puzzles table ready');
+
+    // Create puzzle_clues table (references daily_puzzles)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS puzzle_clues (
+        id SERIAL PRIMARY KEY,
+        daily_puzzle_id INTEGER NOT NULL,
+        clue_number INTEGER NOT NULL,
+        clue TEXT NOT NULL,
+        answer TEXT NOT NULL,
+        linking_word TEXT NOT NULL,
+        FOREIGN KEY (daily_puzzle_id) REFERENCES daily_puzzles (id) ON DELETE CASCADE,
+        UNIQUE(daily_puzzle_id, clue_number)
+      )
+    `);
+    console.log('✅ Puzzle clues table ready');
 
     // Create game_results table
     await client.query(`
