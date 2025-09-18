@@ -1,12 +1,10 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const pool = require('../db-connection');
 const bcrypt = require('bcryptjs');
 
 const router = express.Router();
-const DB_PATH = path.join(__dirname, '..', 'database.sqlite');
 
-// Admin login (SAME)
+// Admin login
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -14,114 +12,99 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Username and password are required' });
   }
 
-  const db = new sqlite3.Database(DB_PATH);
+  try {
+    const result = await pool.query(`
+      SELECT id, username, email, password_hash, is_admin
+      FROM users 
+      WHERE username = $1 AND is_admin = true
+    `, [username]);
 
-  db.get(`
-    SELECT id, username, email, password_hash, is_admin
-    FROM users 
-    WHERE username = ? AND is_admin = 1
-  `, [username], async (err, user) => {
-    db.close();
-
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
+    const user = result.rows[0];
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    try {
-      const isValidPassword = await bcrypt.compare(password, user.password_hash);
-      
-      if (!isValidPassword) {
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-
-      const token = 'admin-token-123'; // TODO: Generate proper JWT token
-
-      res.json({
-        success: true,
-        token,
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          isAdmin: user.is_admin
-        }
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Authentication error' });
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
-  });
+
+    const token = 'admin-token-123'; // TODO: Generate proper JWT token
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.is_admin
+      }
+    });
+  } catch (error) {
+    console.error('Database error in login:', error);
+    res.status(500).json({ error: 'Authentication error' });
+  }
 });
 
-// Get all daily puzzles (NEW)
-router.get('/daily-puzzles', requireAuth, (req, res) => {
-  const db = new sqlite3.Database(DB_PATH);
+// Get all daily puzzles
+router.get('/daily-puzzles', requireAuth, async (req, res) => {
+  try {
+    const dailyPuzzlesResult = await pool.query(`
+      SELECT 
+        dp.*,
+        u.username as created_by_username,
+        COUNT(gr.id) as completion_count
+      FROM daily_puzzles dp
+      LEFT JOIN users u ON dp.created_by = u.id
+      LEFT JOIN game_results gr ON dp.id = gr.daily_puzzle_id
+      GROUP BY dp.id, u.username
+      ORDER BY dp.date DESC
+    `);
 
-  db.all(`
-    SELECT 
-      dp.*,
-      u.username as created_by_username,
-      COUNT(gr.id) as completion_count
-    FROM daily_puzzles dp
-    LEFT JOIN users u ON dp.created_by = u.id
-    LEFT JOIN game_results gr ON dp.id = gr.daily_puzzle_id
-    GROUP BY dp.id
-    ORDER BY dp.date DESC
-  `, (err, dailyPuzzles) => {
-    if (err) {
-      console.error('Database error in /daily-puzzles:', err);
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
-    }
+    const dailyPuzzles = dailyPuzzlesResult.rows;
 
-    // Get clues for each daily puzzle
-    const dailyPuzzleIds = dailyPuzzles.map(dp => dp.id);
-    
-    if (dailyPuzzleIds.length === 0) {
-      db.close();
+    if (dailyPuzzles.length === 0) {
       return res.json([]);
     }
 
-    const placeholders = dailyPuzzleIds.map(() => '?').join(',');
+    const dailyPuzzleIds = dailyPuzzles.map(dp => dp.id);
     
-    db.all(`
+    const cluesResult = await pool.query(`
       SELECT daily_puzzle_id, clue_number, clue, answer, linking_word
       FROM puzzle_clues
-      WHERE daily_puzzle_id IN (${placeholders})
+      WHERE daily_puzzle_id = ANY($1)
       ORDER BY daily_puzzle_id, clue_number
-    `, dailyPuzzleIds, (err, clues) => {
-      db.close();
+    `, [dailyPuzzleIds]);
 
-      if (err) {
-        console.error('Database error loading clues:', err);
-        return res.status(500).json({ error: 'Database error' });
+    const clues = cluesResult.rows;
+
+    // Group clues by daily puzzle
+    const cluesByPuzzle = {};
+    clues.forEach(clue => {
+      if (!cluesByPuzzle[clue.daily_puzzle_id]) {
+        cluesByPuzzle[clue.daily_puzzle_id] = [];
       }
-
-      // Group clues by daily puzzle
-      const cluesByPuzzle = {};
-      clues.forEach(clue => {
-        if (!cluesByPuzzle[clue.daily_puzzle_id]) {
-          cluesByPuzzle[clue.daily_puzzle_id] = [];
-        }
-        cluesByPuzzle[clue.daily_puzzle_id].push(clue);
-      });
-
-      // Combine daily puzzles with their clues
-      const result = dailyPuzzles.map(dp => ({
-        ...dp,
-        clues: cluesByPuzzle[dp.id] || []
-      }));
-
-      res.json(result);
+      cluesByPuzzle[clue.daily_puzzle_id].push(clue);
     });
-  });
+
+    // Combine daily puzzles with their clues
+    const result = dailyPuzzles.map(dp => ({
+      ...dp,
+      clues: cluesByPuzzle[dp.id] || []
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Database error in /daily-puzzles:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
-// Create new daily puzzle (NEW)
-router.post('/daily-puzzles', requireAuth, (req, res) => {
+// Create new daily puzzle
+router.post('/daily-puzzles', requireAuth, async (req, res) => {
   const { date, difficulty = 1, clues } = req.body;
 
   // Validation
@@ -157,83 +140,59 @@ router.post('/daily-puzzles', requireAuth, (req, res) => {
     }
   }
 
-  const db = new sqlite3.Database(DB_PATH);
+  const client = await pool.connect();
 
-  // Start transaction
-  db.run('BEGIN TRANSACTION', (err) => {
-    if (err) {
-      console.error('Transaction start error:', err);
-      db.close();
-      return res.status(500).json({ error: 'Failed to start transaction' });
-    }
+  try {
+    await client.query('BEGIN');
 
     // Create daily puzzle
-    db.run(`
+    const dailyPuzzleResult = await client.query(`
       INSERT INTO daily_puzzles (date, difficulty, created_by)
-      VALUES (?, ?, ?)
-    `, [date, difficulty, req.user.id], function(err) {
-      if (err) {
-        console.error('Insert daily puzzle error:', err);
-        db.run('ROLLBACK');
-        db.close();
-        if (err.code === 'SQLITE_CONSTRAINT') {
-          return res.status(409).json({ error: 'A daily puzzle already exists for this date' });
-        }
-        return res.status(500).json({ error: 'Failed to create daily puzzle' });
-      }
+      VALUES ($1, $2, $3)
+      RETURNING id
+    `, [date, difficulty, req.user.id]);
 
-      const dailyPuzzleId = this.lastID;
+    const dailyPuzzleId = dailyPuzzleResult.rows[0].id;
 
-      // Insert clues
-      let insertedClues = 0;
-      let hasError = false;
+    // Insert clues
+    for (let i = 0; i < clues.length; i++) {
+      const clue = clues[i];
+      await client.query(`
+        INSERT INTO puzzle_clues (daily_puzzle_id, clue_number, clue, answer, linking_word)
+        VALUES ($1, $2, $3, $4, $5)
+      `, [
+        dailyPuzzleId,
+        i + 1,
+        clue.clue,
+        clue.answer.toUpperCase(),
+        clue.linkingWord.toUpperCase()
+      ]);
+    }
 
-      clues.forEach((clue, index) => {
-        if (hasError) return;
+    await client.query('COMMIT');
 
-        db.run(`
-          INSERT INTO puzzle_clues (daily_puzzle_id, clue_number, clue, answer, linking_word)
-          VALUES (?, ?, ?, ?, ?)
-        `, [
-          dailyPuzzleId,
-          index + 1,
-          clue.clue,
-          clue.answer.toUpperCase(),
-          clue.linkingWord.toUpperCase()
-        ], function(err) {
-          if (err && !hasError) {
-            console.error(`Insert clue ${index + 1} error:`, err);
-            hasError = true;
-            db.run('ROLLBACK');
-            db.close();
-            return res.status(500).json({ error: `Failed to create clue ${index + 1}` });
-          }
-
-          insertedClues++;
-          if (insertedClues === clues.length && !hasError) {
-            // Commit transaction
-            db.run('COMMIT', (err) => {
-              db.close();
-              if (err) {
-                console.error('Commit error:', err);
-                return res.status(500).json({ error: 'Failed to commit transaction' });
-              }
-
-              res.status(201).json({
-                success: true,
-                dailyPuzzleId: dailyPuzzleId,
-                message: 'Daily puzzle created successfully'
-              });
-            });
-          }
-        });
-      });
+    res.status(201).json({
+      success: true,
+      dailyPuzzleId: dailyPuzzleId,
+      message: 'Daily puzzle created successfully'
     });
-  });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error creating daily puzzle:', error);
+    
+    if (error.constraint === 'daily_puzzles_date_key') {
+      res.status(409).json({ error: 'A daily puzzle already exists for this date' });
+    } else {
+      res.status(500).json({ error: 'Failed to create daily puzzle' });
+    }
+  } finally {
+    client.release();
+  }
 });
 
-// Update daily puzzle (NEW)
-router.put('/daily-puzzles/:id', requireAuth, (req, res) => {
+// Update daily puzzle
+router.put('/daily-puzzles/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { date, difficulty, clues } = req.body;
 
@@ -268,207 +227,165 @@ router.put('/daily-puzzles/:id', requireAuth, (req, res) => {
     }
   }
 
-  const db = new sqlite3.Database(DB_PATH);
+  const client = await pool.connect();
 
-  db.run('BEGIN TRANSACTION', (err) => {
-    if (err) {
-      console.error('Transaction start error:', err);
-      db.close();
-      return res.status(500).json({ error: 'Failed to start transaction' });
-    }
+  try {
+    await client.query('BEGIN');
 
     // Update daily puzzle
-    db.run(`
+    const updateResult = await client.query(`
       UPDATE daily_puzzles 
-      SET date = ?, difficulty = ?
-      WHERE id = ?
-    `, [date, difficulty || 1, id], function(err) {
-      if (err) {
-        console.error('Update daily puzzle error:', err);
-        db.run('ROLLBACK');
-        db.close();
-        if (err.code === 'SQLITE_CONSTRAINT') {
-          return res.status(409).json({ error: 'A daily puzzle already exists for this date' });
-        }
-        return res.status(500).json({ error: 'Failed to update daily puzzle' });
-      }
+      SET date = $1, difficulty = $2
+      WHERE id = $3
+    `, [date, difficulty || 1, id]);
 
-      if (this.changes === 0) {
-        db.run('ROLLBACK');
-        db.close();
+    if (updateResult.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Daily puzzle not found' });
+    }
+
+    // Delete existing clues
+    await client.query(`DELETE FROM puzzle_clues WHERE daily_puzzle_id = $1`, [id]);
+
+    // Insert new clues
+    for (let i = 0; i < clues.length; i++) {
+      const clue = clues[i];
+      await client.query(`
+        INSERT INTO puzzle_clues (daily_puzzle_id, clue_number, clue, answer, linking_word)
+        VALUES ($1, $2, $3, $4, $5)
+      `, [
+        id,
+        i + 1,
+        clue.clue,
+        clue.answer.toUpperCase(),
+        clue.linkingWord.toUpperCase()
+      ]);
+    }
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Daily puzzle updated successfully'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating daily puzzle:', error);
+    
+    if (error.constraint === 'daily_puzzles_date_key') {
+      res.status(409).json({ error: 'A daily puzzle already exists for this date' });
+    } else {
+      res.status(500).json({ error: 'Failed to update daily puzzle' });
+    }
+  } finally {
+    client.release();
+  }
+});
+
+// Delete daily puzzle
+router.delete('/daily-puzzles/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Check if puzzle has game results
+    const resultCountResult = await pool.query(`
+      SELECT COUNT(*) as result_count
+      FROM game_results
+      WHERE daily_puzzle_id = $1
+    `, [id]);
+
+    const resultCount = parseInt(resultCountResult.rows[0].result_count);
+
+    if (resultCount > 0) {
+      // Don't delete, just deactivate
+      const updateResult = await pool.query(`
+        UPDATE daily_puzzles 
+        SET is_active = false
+        WHERE id = $1
+      `, [id]);
+
+      if (updateResult.rowCount === 0) {
         return res.status(404).json({ error: 'Daily puzzle not found' });
       }
 
-      // Delete existing clues
-      db.run(`DELETE FROM puzzle_clues WHERE daily_puzzle_id = ?`, [id], (err) => {
-        if (err) {
-          console.error('Delete clues error:', err);
-          db.run('ROLLBACK');
-          db.close();
-          return res.status(500).json({ error: 'Failed to delete old clues' });
-        }
-
-        // Insert new clues
-        let insertedClues = 0;
-        let hasError = false;
-
-        clues.forEach((clue, index) => {
-          if (hasError) return;
-
-          db.run(`
-            INSERT INTO puzzle_clues (daily_puzzle_id, clue_number, clue, answer, linking_word)
-            VALUES (?, ?, ?, ?, ?)
-          `, [
-            id,
-            index + 1,
-            clue.clue,
-            clue.answer.toUpperCase(),
-            clue.linkingWord.toUpperCase()
-          ], function(err) {
-            if (err && !hasError) {
-              console.error(`Update clue ${index + 1} error:`, err);
-              hasError = true;
-              db.run('ROLLBACK');
-              db.close();
-              return res.status(500).json({ error: `Failed to update clue ${index + 1}` });
-            }
-
-            insertedClues++;
-            if (insertedClues === clues.length && !hasError) {
-              db.run('COMMIT', (err) => {
-                db.close();
-                if (err) {
-                  console.error('Commit error:', err);
-                  return res.status(500).json({ error: 'Failed to commit transaction' });
-                }
-
-                res.json({
-                  success: true,
-                  message: 'Daily puzzle updated successfully'
-                });
-              });
-            }
-          });
-        });
-      });
-    });
-  });
-});
-
-// Delete daily puzzle (NEW)
-router.delete('/daily-puzzles/:id', requireAuth, (req, res) => {
-  const { id } = req.params;
-  const db = new sqlite3.Database(DB_PATH);
-
-  // Check if puzzle has game results
-  db.get(`
-    SELECT COUNT(*) as result_count
-    FROM game_results
-    WHERE daily_puzzle_id = ?
-  `, [id], (err, row) => {
-    if (err) {
-      console.error('Check game results error:', err);
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
-    }
-
-    if (row.result_count > 0) {
-      // Don't delete, just deactivate
-      db.run(`
-        UPDATE daily_puzzles 
-        SET is_active = 0
-        WHERE id = ?
-      `, [id], function(err) {
-        db.close();
-
-        if (err) {
-          console.error('Deactivate daily puzzle error:', err);
-          return res.status(500).json({ error: 'Failed to deactivate daily puzzle' });
-        }
-
-        res.json({
-          success: true,
-          message: 'Daily puzzle deactivated (has existing game results)'
-        });
+      res.json({
+        success: true,
+        message: 'Daily puzzle deactivated (has existing game results)'
       });
     } else {
       // Safe to delete (will cascade to clues)
-      db.run(`
+      const deleteResult = await pool.query(`
         DELETE FROM daily_puzzles
-        WHERE id = ?
-      `, [id], function(err) {
-        db.close();
+        WHERE id = $1
+      `, [id]);
 
-        if (err) {
-          console.error('Delete daily puzzle error:', err);
-          return res.status(500).json({ error: 'Failed to delete daily puzzle' });
-        }
+      if (deleteResult.rowCount === 0) {
+        return res.status(404).json({ error: 'Daily puzzle not found' });
+      }
 
-        if (this.changes === 0) {
-          return res.status(404).json({ error: 'Daily puzzle not found' });
-        }
-
-        res.json({
-          success: true,
-          message: 'Daily puzzle deleted successfully'
-        });
+      res.json({
+        success: true,
+        message: 'Daily puzzle deleted successfully'
       });
     }
-  });
+  } catch (error) {
+    console.error('Error deleting daily puzzle:', error);
+    res.status(500).json({ error: 'Failed to delete daily puzzle' });
+  }
 });
 
-// Get admin dashboard stats (UPDATED)
-router.get('/dashboard', requireAuth, (req, res) => {
-  const db = new sqlite3.Database(DB_PATH);
+// Get admin dashboard stats
+router.get('/dashboard', requireAuth, async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
 
-  db.all(`
-    SELECT 
-      (SELECT COUNT(*) FROM daily_puzzles WHERE is_active = 1) as total_puzzles,
-      (SELECT COUNT(*) FROM daily_puzzles WHERE date > ? AND is_active = 1) as future_puzzles,
-      (SELECT COUNT(*) FROM daily_puzzles WHERE date = ? AND is_active = 1) as today_puzzle,
-      (SELECT COUNT(*) FROM game_results WHERE DATE(completed_at) = ?) as today_plays,
-      (SELECT COUNT(*) FROM users WHERE is_admin = 0) as total_users,
-      (SELECT AVG(score) FROM game_results WHERE DATE(completed_at) = ?) as today_avg_score,
-      (SELECT COUNT(*) FROM game_results WHERE DATE(completed_at) >= DATE('now', '-7 days')) as week_plays
-  `, [today, today, today, today], (err, rows) => {
-    db.close();
+  try {
+    const statsResult = await pool.query(`
+      SELECT 
+        (SELECT COUNT(*) FROM daily_puzzles WHERE is_active = true) as total_puzzles,
+        (SELECT COUNT(*) FROM daily_puzzles WHERE date > $1 AND is_active = true) as future_puzzles,
+        (SELECT COUNT(*) FROM daily_puzzles WHERE date = $1 AND is_active = true) as today_puzzle,
+        (SELECT COUNT(*) FROM game_results WHERE DATE(completed_at) = $1) as today_plays,
+        (SELECT COUNT(*) FROM users WHERE is_admin = false) as total_users,
+        (SELECT AVG(score) FROM game_results WHERE DATE(completed_at) = $1) as today_avg_score,
+        (SELECT COUNT(*) FROM game_results WHERE DATE(completed_at) >= CURRENT_DATE - INTERVAL '7 days') as week_plays
+    `, [today]);
 
-    if (err) {
-      console.error('Dashboard stats error:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-
-    res.json(rows[0]);
-  });
+    res.json(statsResult.rows[0]);
+  } catch (error) {
+    console.error('Dashboard stats error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
-// Bulk import daily puzzles (NEW)
-router.post('/daily-puzzles/bulk-import', requireAuth, (req, res) => {
+// Bulk import daily puzzles
+router.post('/daily-puzzles/bulk-import', requireAuth, async (req, res) => {
   const { dailyPuzzles } = req.body;
 
   if (!Array.isArray(dailyPuzzles) || dailyPuzzles.length === 0) {
     return res.status(400).json({ error: 'Daily puzzles array is required' });
   }
 
-  const db = new sqlite3.Database(DB_PATH);
   const results = {
     successful: 0,
     failed: 0,
     errors: []
   };
 
-  db.serialize(() => {
-    db.run('BEGIN TRANSACTION');
+  const client = await pool.connect();
 
-    dailyPuzzles.forEach((dailyPuzzle, index) => {
+  try {
+    await client.query('BEGIN');
+
+    for (let index = 0; index < dailyPuzzles.length; index++) {
+      const dailyPuzzle = dailyPuzzles[index];
       const { date, difficulty = 1, clues } = dailyPuzzle;
 
       // Validation
       if (!date || !clues || !Array.isArray(clues) || clues.length !== 5) {
         results.failed++;
         results.errors.push(`Daily puzzle ${index + 1}: Missing date or exactly 5 clues`);
-        return;
+        continue;
       }
 
       // Validate clues
@@ -490,81 +407,82 @@ router.post('/daily-puzzles/bulk-import', requireAuth, (req, res) => {
         }
       }
 
-      if (clueError) return;
+      if (clueError) continue;
 
-      // Insert daily puzzle
-      db.run(`
-        INSERT OR IGNORE INTO daily_puzzles (date, difficulty, created_by)
-        VALUES (?, ?, ?)
-      `, [date, difficulty, req.user.id], function(err) {
-        if (err) {
-          results.failed++;
-          results.errors.push(`Daily puzzle ${index + 1}: ${err.message}`);
-        } else if (this.changes > 0) {
-          const dailyPuzzleId = this.lastID;
+      try {
+        // Insert daily puzzle (ON CONFLICT DO NOTHING for PostgreSQL)
+        const dailyPuzzleResult = await client.query(`
+          INSERT INTO daily_puzzles (date, difficulty, created_by)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (date) DO NOTHING
+          RETURNING id
+        `, [date, difficulty, req.user.id]);
+
+        if (dailyPuzzleResult.rows.length > 0) {
+          const dailyPuzzleId = dailyPuzzleResult.rows[0].id;
           
           // Insert clues
-          clues.forEach((clue, clueIndex) => {
-            db.run(`
+          for (let i = 0; i < clues.length; i++) {
+            const clue = clues[i];
+            await client.query(`
               INSERT INTO puzzle_clues (daily_puzzle_id, clue_number, clue, answer, linking_word)
-              VALUES (?, ?, ?, ?, ?)
+              VALUES ($1, $2, $3, $4, $5)
             `, [
               dailyPuzzleId,
-              clueIndex + 1,
+              i + 1,
               clue.clue,
               clue.answer.toUpperCase(),
               clue.linkingWord.toUpperCase()
             ]);
-          });
+          }
           
           results.successful++;
         } else {
           results.failed++;
           results.errors.push(`Daily puzzle ${index + 1}: Date already exists`);
         }
-      });
-    });
-
-    db.run('COMMIT', (err) => {
-      db.close();
-
-      if (err) {
-        console.error('Bulk import commit error:', err);
-        return res.status(500).json({ error: 'Transaction failed' });
+      } catch (error) {
+        results.failed++;
+        results.errors.push(`Daily puzzle ${index + 1}: ${error.message}`);
       }
+    }
 
-      res.json({
-        success: true,
-        ...results,
-        message: `Import complete: ${results.successful} successful, ${results.failed} failed`
-      });
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      ...results,
+      message: `Import complete: ${results.successful} successful, ${results.failed} failed`
     });
-  });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Bulk import error:', error);
+    res.status(500).json({ error: 'Transaction failed' });
+  } finally {
+    client.release();
+  }
 });
 
 // Legacy support - keep old endpoints working temporarily
-router.get('/puzzles', requireAuth, (req, res) => {
-  const db = new sqlite3.Database(DB_PATH);
-  
-  db.all(`
-    SELECT 
-      p.*,
-      u.username as created_by_username,
-      0 as completion_count
-    FROM puzzles p
-    LEFT JOIN users u ON p.created_by = u.id
-    WHERE p.migrated = 0 OR p.migrated IS NULL
-    ORDER BY p.date DESC
-  `, (err, rows) => {
-    db.close();
+router.get('/puzzles', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        p.*,
+        u.username as created_by_username,
+        0 as completion_count
+      FROM puzzles p
+      LEFT JOIN users u ON p.created_by = u.id
+      WHERE p.migrated = false OR p.migrated IS NULL
+      ORDER BY p.date DESC
+    `);
 
-    if (err) {
-      console.error('Legacy puzzles error:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-
-    res.json(rows);
-  });
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Legacy puzzles error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Simple auth middleware
