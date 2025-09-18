@@ -790,7 +790,6 @@ function updateStats(score) {
     
     document.getElementById('gamesPlayed').textContent = stats.gamesPlayed;
     document.getElementById('currentStreak').textContent = stats.currentStreak;
-    document.getElementById('streak').textContent = stats.currentStreak;
     document.getElementById('bestScore').textContent = `${stats.bestScore}/100`;
 }
 
