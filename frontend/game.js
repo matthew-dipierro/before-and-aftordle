@@ -4,7 +4,7 @@ const API_BASE = (window.location.hostname === 'localhost' ||
                   window.location.protocol === 'file:' ||
                   window.location.hostname === '127.0.0.1')
     ? 'http://localhost:3001/api'  // Local development
-    : 'https://before-and-aftordle.onrender.com/api';  // Production
+    : '/api';  // Production
 
 console.log('Current hostname:', window.location.hostname);
 console.log('Using API_BASE:', API_BASE);
@@ -67,17 +67,19 @@ function updateIntroScreen() {
 
 function getPuzzleNumber(dateString) {
     // Calculate puzzle number based on days since game launch
-    // Using September 10, 2025 as day 1 for example
+    // Using September 10, 2025 as day 1
     const launchDate = new Date('2025-09-10');
-    const puzzleDate = new Date(dateString);
+    
+    // Handle both YYYY-MM-DD and PostgreSQL date formats
+    const puzzleDate = new Date(dateString + 'T00:00:00'); // Force local timezone
+    
     const daysDiff = Math.floor((puzzleDate - launchDate) / (1000 * 60 * 60 * 24)) + 1;
     return Math.max(1, daysDiff);
 }
 
 function formatDate(dateString) {
-    // Parse the date string and ensure it's interpreted as local time
-    const [year, month, day] = dateString.split('-').map(Number);
-    const date = new Date(year, month - 1, day); // month is 0-indexed in JS
+    // Handle PostgreSQL date format properly
+    const date = new Date(dateString + 'T00:00:00'); // Force local timezone interpretation
     
     return date.toLocaleDateString('en-US', { 
         weekday: 'long',
