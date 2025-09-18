@@ -67,11 +67,13 @@ function updateIntroScreen() {
 
 function getPuzzleNumber(dateString) {
     // Calculate puzzle number based on days since game launch
-    // Using September 10, 2025 as day 1
-    const launchDate = new Date('2025-09-10');
+    // Using September 18, 2025 as day 1 (launch day)
+    const launchDate = new Date('2025-09-18');
     
-    // Handle both YYYY-MM-DD and PostgreSQL date formats
-    const puzzleDate = new Date(dateString + 'T00:00:00'); // Force local timezone
+    // Handle PostgreSQL date format properly
+    const cleanDateString = dateString.split('T')[0]; // Remove time if present
+    const [year, month, day] = cleanDateString.split('-').map(Number);
+    const puzzleDate = new Date(year, month - 1, day); // month is 0-indexed in JS
     
     const daysDiff = Math.floor((puzzleDate - launchDate) / (1000 * 60 * 60 * 24)) + 1;
     return Math.max(1, daysDiff);
