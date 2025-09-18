@@ -36,6 +36,18 @@ app.use(express.static('public'));
 app.use('/api/puzzles', puzzleRoutes);
 app.use('/api/admin', adminRoutes);
 
+// Temporary endpoint to initialize database
+app.get('/api/init-database', async (req, res) => {
+  try {
+    const { initDatabase } = require('./scripts/init-db');
+    await initDatabase();
+    res.json({ success: true, message: 'Database initialized successfully' });
+  } catch (error) {
+    console.error('Database init error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
