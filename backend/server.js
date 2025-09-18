@@ -33,7 +33,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Static files (for serving the frontend if needed)
-app.use(express.static('public'));
+app.use(express.static('frontend'));
 
 // API Routes
 app.use('/api/puzzles', puzzleRoutes);
