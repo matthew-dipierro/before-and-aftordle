@@ -4,7 +4,7 @@ const API_BASE = (window.location.hostname === 'localhost' ||
                   window.location.protocol === 'file:' ||
                   window.location.hostname === '127.0.0.1')
     ? 'http://localhost:3001/api'  // Local development
-    : '/api';  // Production
+    : 'https://before-and-aftordle.onrender.com/api';  // Production
 
 console.log('Current hostname:', window.location.hostname);
 console.log('Using API_BASE:', API_BASE);
@@ -633,20 +633,8 @@ function showFeedback(message, type) {
 }
 
 function updateProgress() {
-    const segments = document.querySelectorAll('.segment');
-    
-    segments.forEach((segment, index) => {
-        segment.classList.remove('completed', 'current');
-        
-        if (index < currentQuestion) {
-            // Questions already completed
-            segment.classList.add('completed');
-        } else if (index === currentQuestion) {
-            // Current question
-            segment.classList.add('current');
-        }
-        // Remaining segments stay grey (no class)
-    });
+    const progress = (currentQuestion / puzzleClues.length) * 100;
+    document.getElementById('progress').style.width = progress + '%';
 }
 
 function startTimer() {
@@ -802,6 +790,7 @@ function updateStats(score) {
     
     document.getElementById('gamesPlayed').textContent = stats.gamesPlayed;
     document.getElementById('currentStreak').textContent = stats.currentStreak;
+    document.getElementById('streak').textContent = stats.currentStreak;
     document.getElementById('bestScore').textContent = `${stats.bestScore}/100`;
 }
 
