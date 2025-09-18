@@ -507,7 +507,7 @@
 
         <!-- Puzzle Management Panel -->
         <div class="panel">
-            <h2>📝 Manage Daily Puzzles</h2>
+            <h2>🗂 Manage Daily Puzzles</h2>
             
             <div class="quick-actions">
                 <input type="text" id="searchPuzzles" placeholder="🔍 Search puzzles..." style="width: 300px;" oninput="filterPuzzles()">
@@ -529,7 +529,7 @@
                           window.location.protocol === 'file:' ||
                           window.location.hostname === '127.0.0.1')
             ? 'http://localhost:3001/api'  // Local development
-            : 'https://before-and-aftordle.onrender.com/api';  // Production
+            : '/api';  // Production
         
         console.log('Current hostname:', window.location.hostname);
         console.log('Using API_BASE:', API_BASE);
@@ -544,10 +544,12 @@
             return `${year}-${month}-${day}`;
         }
 
-        // Parse date string properly for display
+        // Parse date string properly for display - FIXED
         function parseDisplayDate(dateString) {
-            const parts = dateString.split('-');
-            return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            // Handle PostgreSQL date format properly
+            const cleanDateString = dateString.split('T')[0]; // Remove time if present
+            const [year, month, day] = cleanDateString.split('-').map(Number);
+            return new Date(year, month - 1, day); // month is 0-indexed in JS
         }
 
         // Initialize
@@ -696,16 +698,19 @@
             const puzzleList = document.getElementById('puzzleList');
             
             if (puzzles.length === 0) {
-                puzzleList.innerHTML = '<div style="text-align: center; padding: 20px;">📭 No daily puzzles found</div>';
+                puzzleList.innerHTML = '<div style="text-align: center; padding: 20px;">🔭 No daily puzzles found</div>';
                 return;
             }
 
             puzzleList.innerHTML = puzzles.map(puzzle => {
                 const displayDate = parseDisplayDate(puzzle.date);
-                const todayString = formatLocalDate(new Date());
                 
-                const isToday = puzzle.date === todayString;
-                const isPast = puzzle.date < todayString;
+                // Handle PostgreSQL date format (YYYY-MM-DD vs local date) - FIXED
+                const todayString = new Date().toISOString().split('T')[0];
+                const puzzleDateString = puzzle.date.split('T')[0]; // Handle both formats
+                
+                const isToday = puzzleDateString === todayString;
+                const isPast = puzzleDateString < todayString;
                 
                 let statusIcon = '📅';
                 let statusText = 'Future';
@@ -860,7 +865,7 @@
             if (!puzzle) return;
 
             document.getElementById('editingPuzzleId').value = id;
-            document.getElementById('puzzleDate').value = puzzle.date;
+            document.getElementById('puzzleDate').value = puzzle.date.split('T')[0]; // Handle PostgreSQL date format
             document.getElementById('puzzleDifficulty').value = puzzle.difficulty || 1;
             
             // Fill in clues
@@ -924,12 +929,12 @@
         function generateSamplePuzzle() {
             const samples = [
                 {
-                    clue: "Arctic mammal + Big embrace",
-                    answer: "POLAR BEAR HUG",
-                    linking: "BEAR"
+                    clue: "Device for pointing and clicking + Device to catch rodents",
+                    answer: "COMPUTER MOUSE TRAP",
+                    linking: "MOUSE"
                 },
                 {
-                    clue: "Living room furniture for beverages + Book chapter navigation aid",
+                    clue: "Furniture for beverages + Book navigation aid",
                     answer: "COFFEE TABLE OF CONTENTS",
                     linking: "TABLE"
                 },
@@ -939,14 +944,14 @@
                     linking: "STRIP"
                 },
                 {
-                    clue: "Hawaiian pop star + Campy sci-fi invasion movie",
-                    answer: "BRUNO MARS ATTACKS",
-                    linking: "MARS"
+                    clue: "Ocean mammal + Observation area",
+                    answer: "WHALE WATCHING DECK",
+                    linking: "WATCHING"
                 },
                 {
-                    clue: "Feeling extremely pleased + Legendary British rock band",
-                    answer: "TICKLED PINK FLOYD",
-                    linking: "PINK"
+                    clue: "Celestial body + Light beam",
+                    answer: "MOON BEAM OF LIGHT",
+                    linking: "BEAM"
                 }
             ];
 
@@ -962,7 +967,7 @@
 
         function exportPuzzles() {
             const exportData = allPuzzles.map(p => ({
-                date: p.date,
+                date: p.date.split('T')[0], // Clean date format
                 difficulty: p.difficulty,
                 clues: p.clues.map(c => ({
                     clue: c.clue,
@@ -976,7 +981,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `aftordle-daily-puzzles-${formatLocalDate(new Date())}.json`;
+            a.download = `phrasey-chain-daily-puzzles-${formatLocalDate(new Date())}.json`;
             a.click();
             URL.revokeObjectURL(url);
             
