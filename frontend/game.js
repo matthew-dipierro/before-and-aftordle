@@ -79,7 +79,9 @@ function getPuzzleNumber(dateString) {
 
 function formatDate(dateString) {
     // Handle PostgreSQL date format properly
-    const date = new Date(dateString + 'T00:00:00'); // Force local timezone interpretation
+    const cleanDateString = dateString.split('T')[0]; // Remove time if present
+    const [year, month, day] = cleanDateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // month is 0-indexed in JS
     
     return date.toLocaleDateString('en-US', { 
         weekday: 'long',
