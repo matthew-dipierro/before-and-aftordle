@@ -1,29 +1,23 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const pool = require('../db-connection');
 
 const router = express.Router();
-const DB_PATH = path.join(__dirname, '..', 'database.sqlite');
 
 // Get today's daily puzzle (UPDATED - returns 5 clues)
-router.get('/today', (req, res) => {
+router.get('/today', async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
-  const db = new sqlite3.Database(DB_PATH);
 
-  // Get daily puzzle
-  db.get(`
-    SELECT id, date, difficulty, plays, avg_score, avg_time
-    FROM daily_puzzles 
-    WHERE date = ? AND is_active = 1
-  `, [today], (err, dailyPuzzle) => {
-    if (err) {
-      db.close();
-      console.error('Database error:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
+  try {
+    // Get daily puzzle
+    const dailyPuzzleResult = await pool.query(`
+      SELECT id, date, difficulty, plays, avg_score, avg_time
+      FROM daily_puzzles 
+      WHERE date = $1 AND is_active = true
+    `, [today]);
+
+    const dailyPuzzle = dailyPuzzleResult.rows[0];
 
     if (!dailyPuzzle) {
-      db.close();
       return res.status(404).json({ 
         error: 'No puzzle available for today',
         date: today 
@@ -31,47 +25,45 @@ router.get('/today', (req, res) => {
     }
 
     // Get clues for this daily puzzle
-    db.all(`
+    const cluesResult = await pool.query(`
       SELECT clue_number, clue, answer, linking_word
       FROM puzzle_clues
-      WHERE daily_puzzle_id = ?
+      WHERE daily_puzzle_id = $1
       ORDER BY clue_number
-    `, [dailyPuzzle.id], (err, clues) => {
-      db.close();
-      
-      if (err) {
-        console.error('Database error:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
+    `, [dailyPuzzle.id]);
 
-      if (clues.length === 0) {
-        return res.status(404).json({ 
-          error: 'No clues found for today\'s puzzle',
-          date: today 
-        });
-      }
+    const clues = cluesResult.rows;
+    
+    if (clues.length === 0) {
+      return res.status(404).json({ 
+        error: 'No clues found for today\'s puzzle',
+        date: today 
+      });
+    }
 
-      // Don't send answers to the client!
-      const puzzleData = {
-        id: dailyPuzzle.id,
-        date: dailyPuzzle.date,
-        difficulty: dailyPuzzle.difficulty,
-        plays: dailyPuzzle.plays,
-        avg_score: dailyPuzzle.avg_score,
-        clues: clues.map(clue => ({
-          clue_number: clue.clue_number,
-          clue: clue.clue
-        })),
-        total_clues: clues.length
-      };
+    // Don't send answers to the client!
+    const puzzleData = {
+      id: dailyPuzzle.id,
+      date: dailyPuzzle.date,
+      difficulty: dailyPuzzle.difficulty,
+      plays: dailyPuzzle.plays,
+      avg_score: dailyPuzzle.avg_score,
+      clues: clues.map(clue => ({
+        clue_number: clue.clue_number,
+        clue: clue.clue
+      })),
+      total_clues: clues.length
+    };
 
-      res.json(puzzleData);
-    });
-  });
+    res.json(puzzleData);
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Validate answer for specific clue (NEW)
-router.post('/validate-clue', (req, res) => {
+router.post('/validate-clue', async (req, res) => {
   const { clue_number, answer } = req.body;
   const today = new Date().toISOString().split('T')[0];
   
@@ -79,56 +71,51 @@ router.post('/validate-clue', (req, res) => {
     return res.status(400).json({ error: 'Clue number and answer are required' });
   }
 
-  const db = new sqlite3.Database(DB_PATH);
+  try {
+    // Get today's daily puzzle
+    const dailyPuzzleResult = await pool.query(`
+      SELECT id FROM daily_puzzles 
+      WHERE date = $1 AND is_active = true
+    `, [today]);
 
-  // Get today's daily puzzle
-  db.get(`
-    SELECT id FROM daily_puzzles 
-    WHERE date = ? AND is_active = 1
-  `, [today], (err, dailyPuzzle) => {
-    if (err) {
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
-    }
+    const dailyPuzzle = dailyPuzzleResult.rows[0];
 
     if (!dailyPuzzle) {
-      db.close();
       return res.status(404).json({ error: 'No puzzle available for today' });
     }
 
     // Get the specific clue
-    db.get(`
+    const clueResult = await pool.query(`
       SELECT clue_number, answer, linking_word
       FROM puzzle_clues 
-      WHERE daily_puzzle_id = ? AND clue_number = ?
-    `, [dailyPuzzle.id, clue_number], (err, clue) => {
-      db.close();
-      
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
+      WHERE daily_puzzle_id = $1 AND clue_number = $2
+    `, [dailyPuzzle.id, clue_number]);
 
-      if (!clue) {
-        return res.status(404).json({ error: 'Clue not found' });
-      }
+    const clue = clueResult.rows[0];
+    
+    if (!clue) {
+      return res.status(404).json({ error: 'Clue not found' });
+    }
 
-      const isCorrect = answer.toUpperCase().trim() === clue.answer.toUpperCase().trim();
-      
-      res.json({
-        correct: isCorrect,
-        clue_number: clue.clue_number,
-        daily_puzzle_id: dailyPuzzle.id,
-        ...(isCorrect && { 
-          linking_word: clue.linking_word,
-          full_answer: clue.answer 
-        })
-      });
+    const isCorrect = answer.toUpperCase().trim() === clue.answer.toUpperCase().trim();
+    
+    res.json({
+      correct: isCorrect,
+      clue_number: clue.clue_number,
+      daily_puzzle_id: dailyPuzzle.id,
+      ...(isCorrect && { 
+        linking_word: clue.linking_word,
+        full_answer: clue.answer 
+      })
     });
-  });
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Get hint for specific clue (UPDATED - now supports word-specific hints)
-router.post('/get-hint', (req, res) => {
+router.post('/get-hint', async (req, res) => {
   const { clue_number, word_index, hint_type } = req.body;
   const today = new Date().toISOString().split('T')[0];
   
@@ -142,54 +129,49 @@ router.post('/get-hint', (req, res) => {
     return res.status(400).json({ error: 'hint_type is required when word_index is specified' });
   }
 
-  const db = new sqlite3.Database(DB_PATH);
+  try {
+    // Get today's daily puzzle
+    const dailyPuzzleResult = await pool.query(`
+      SELECT id FROM daily_puzzles 
+      WHERE date = $1 AND is_active = true
+    `, [today]);
 
-  // Get today's daily puzzle
-  db.get(`
-    SELECT id FROM daily_puzzles 
-    WHERE date = ? AND is_active = 1
-  `, [today], (err, dailyPuzzle) => {
-    if (err) {
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
-    }
+    const dailyPuzzle = dailyPuzzleResult.rows[0];
 
     if (!dailyPuzzle) {
-      db.close();
       return res.status(404).json({ error: 'No puzzle available for today' });
     }
 
     // Get the specific clue
-    db.get(`
+    const clueResult = await pool.query(`
       SELECT clue_number, clue, answer, linking_word
       FROM puzzle_clues 
-      WHERE daily_puzzle_id = ? AND clue_number = ?
-    `, [dailyPuzzle.id, clue_number], (err, clue) => {
-      db.close();
-      
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
+      WHERE daily_puzzle_id = $1 AND clue_number = $2
+    `, [dailyPuzzle.id, clue_number]);
 
-      if (!clue) {
-        return res.status(404).json({ error: 'Clue not found' });
-      }
+    const clue = clueResult.rows[0];
+    
+    if (!clue) {
+      return res.status(404).json({ error: 'Clue not found' });
+    }
 
-      // Generate hint based on request type
-      const hintData = generateWordSpecificHint(clue.answer, clue.linking_word, word_index, hint_type);
-      
-      if (hintData.error) {
-        return res.status(400).json(hintData);
-      }
-      
-      res.json({
-        clue_number: clue.clue_number,
-        word_index: word_index,
-        hint_type: hint_type || 'structure',
-        ...hintData
-      });
+    // Generate hint based on request type
+    const hintData = generateWordSpecificHint(clue.answer, clue.linking_word, word_index, hint_type);
+    
+    if (hintData.error) {
+      return res.status(400).json(hintData);
+    }
+    
+    res.json({
+      clue_number: clue.clue_number,
+      word_index: word_index,
+      hint_type: hint_type || 'structure',
+      ...hintData
     });
-  });
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 function generateWordSpecificHint(answer, linkingWord, wordIndex, hintType) {
@@ -295,7 +277,7 @@ function generateWordSpecificHint(answer, linkingWord, wordIndex, hintType) {
 }
 
 // New endpoint to get current hint state for a clue
-router.post('/get-hint-state', (req, res) => {
+router.post('/get-hint-state', async (req, res) => {
   const { clue_number } = req.body;
   const today = new Date().toISOString().split('T')[0];
   
@@ -303,63 +285,58 @@ router.post('/get-hint-state', (req, res) => {
     return res.status(400).json({ error: 'Clue number is required' });
   }
 
-  const db = new sqlite3.Database(DB_PATH);
+  try {
+    // Get today's daily puzzle
+    const dailyPuzzleResult = await pool.query(`
+      SELECT id FROM daily_puzzles 
+      WHERE date = $1 AND is_active = true
+    `, [today]);
 
-  // Get today's daily puzzle
-  db.get(`
-    SELECT id FROM daily_puzzles 
-    WHERE date = ? AND is_active = 1
-  `, [today], (err, dailyPuzzle) => {
-    if (err) {
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
-    }
+    const dailyPuzzle = dailyPuzzleResult.rows[0];
 
     if (!dailyPuzzle) {
-      db.close();
       return res.status(404).json({ error: 'No puzzle available for today' });
     }
 
     // Get the specific clue
-    db.get(`
+    const clueResult = await pool.query(`
       SELECT clue_number, answer, linking_word
       FROM puzzle_clues 
-      WHERE daily_puzzle_id = ? AND clue_number = ?
-    `, [dailyPuzzle.id, clue_number], (err, clue) => {
-      db.close();
-      
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
+      WHERE daily_puzzle_id = $1 AND clue_number = $2
+    `, [dailyPuzzle.id, clue_number]);
 
-      if (!clue) {
-        return res.status(404).json({ error: 'Clue not found' });
-      }
+    const clue = clueResult.rows[0];
+    
+    if (!clue) {
+      return res.status(404).json({ error: 'Clue not found' });
+    }
 
-      const words = clue.answer.split(' ');
-      const linkIndex = words.findIndex(word => word === clue.linking_word);
-      
-      // Return clean state for frontend to manage
-      const word_structure = words.map((word, index) => ({
-        word_index: index,
-        length: word.length,
-        is_linking: index === linkIndex,
-        letters: new Array(word.length).fill('_'),
-        state: 'empty',
-        clickable: index !== linkIndex
-      }));
-      
-      res.json({
-        clue_number: clue.clue_number,
-        word_structure: word_structure,
-        structure_revealed: false
-      });
+    const words = clue.answer.split(' ');
+    const linkIndex = words.findIndex(word => word === clue.linking_word);
+    
+    // Return clean state for frontend to manage
+    const word_structure = words.map((word, index) => ({
+      word_index: index,
+      length: word.length,
+      is_linking: index === linkIndex,
+      letters: new Array(word.length).fill('_'),
+      state: 'empty',
+      clickable: index !== linkIndex
+    }));
+    
+    res.json({
+      clue_number: clue.clue_number,
+      word_structure: word_structure,
+      structure_revealed: false
     });
-  });
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Validate all 5 answers at once (NEW)
-router.post('/validate-all', (req, res) => {
+router.post('/validate-all', async (req, res) => {
   const { answers } = req.body;
   const today = new Date().toISOString().split('T')[0];
   
@@ -367,71 +344,66 @@ router.post('/validate-all', (req, res) => {
     return res.status(400).json({ error: 'Exactly 5 answers are required' });
   }
 
-  const db = new sqlite3.Database(DB_PATH);
+  try {
+    // Get today's daily puzzle
+    const dailyPuzzleResult = await pool.query(`
+      SELECT id FROM daily_puzzles 
+      WHERE date = $1 AND is_active = true
+    `, [today]);
 
-  // Get today's daily puzzle
-  db.get(`
-    SELECT id FROM daily_puzzles 
-    WHERE date = ? AND is_active = 1
-  `, [today], (err, dailyPuzzle) => {
-    if (err) {
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
-    }
+    const dailyPuzzle = dailyPuzzleResult.rows[0];
 
     if (!dailyPuzzle) {
-      db.close();
       return res.status(404).json({ error: 'No puzzle available for today' });
     }
 
     // Get all clues for validation
-    db.all(`
+    const cluesResult = await pool.query(`
       SELECT clue_number, answer, linking_word
       FROM puzzle_clues 
-      WHERE daily_puzzle_id = ?
+      WHERE daily_puzzle_id = $1
       ORDER BY clue_number
-    `, [dailyPuzzle.id], (err, clues) => {
-      db.close();
+    `, [dailyPuzzle.id]);
+
+    const clues = cluesResult.rows;
+    
+    if (clues.length !== 5) {
+      return res.status(500).json({ error: 'Invalid puzzle configuration' });
+    }
+
+    // Validate each answer
+    const results = clues.map((clue, index) => {
+      const userAnswer = answers[index];
+      const isCorrect = userAnswer && 
+                       userAnswer.toUpperCase().trim() === clue.answer.toUpperCase().trim();
       
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      if (clues.length !== 5) {
-        return res.status(500).json({ error: 'Invalid puzzle configuration' });
-      }
-
-      // Validate each answer
-      const results = clues.map((clue, index) => {
-        const userAnswer = answers[index];
-        const isCorrect = userAnswer && 
-                         userAnswer.toUpperCase().trim() === clue.answer.toUpperCase().trim();
-        
-        return {
-          clue_number: clue.clue_number,
-          correct: isCorrect,
-          ...(isCorrect && {
-            linking_word: clue.linking_word,
-            full_answer: clue.answer
-          })
-        };
-      });
-
-      const allCorrect = results.every(r => r.correct);
-      const correctCount = results.filter(r => r.correct).length;
-
-      res.json({
-        all_correct: allCorrect,
-        correct_count: correctCount,
-        daily_puzzle_id: dailyPuzzle.id,
-        results: results
-      });
+      return {
+        clue_number: clue.clue_number,
+        correct: isCorrect,
+        ...(isCorrect && {
+          linking_word: clue.linking_word,
+          full_answer: clue.answer
+        })
+      };
     });
-  });
+
+    const allCorrect = results.every(r => r.correct);
+    const correctCount = results.filter(r => r.correct).length;
+
+    res.json({
+      all_correct: allCorrect,
+      correct_count: correctCount,
+      daily_puzzle_id: dailyPuzzle.id,
+      results: results
+    });
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Submit daily game result (UPDATED)
-router.post('/submit-result', (req, res) => {
+router.post('/submit-result', async (req, res) => {
   const {
     score,
     completionTime,
@@ -447,23 +419,26 @@ router.post('/submit-result', (req, res) => {
   }
 
   const today = new Date().toISOString().split('T')[0];
-  const db = new sqlite3.Database(DB_PATH);
 
-  // Get today's daily puzzle ID
-  db.get(`
-    SELECT id FROM daily_puzzles 
-    WHERE date = ? AND is_active = 1
-  `, [today], (err, dailyPuzzle) => {
-    if (err || !dailyPuzzle) {
-      db.close();
+  try {
+    // Get today's daily puzzle ID
+    const dailyPuzzleResult = await pool.query(`
+      SELECT id FROM daily_puzzles 
+      WHERE date = $1 AND is_active = true
+    `, [today]);
+
+    const dailyPuzzle = dailyPuzzleResult.rows[0];
+
+    if (!dailyPuzzle) {
       return res.status(404).json({ error: 'No active daily puzzle for today' });
     }
 
     // Insert the game result
-    db.run(`
+    const gameResultResult = await pool.query(`
       INSERT INTO game_results 
       (user_id, daily_puzzle_id, score, completion_time, hints_used, wrong_answers, hint_breakdown, clue_results)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id
     `, [
       userId || null,
       dailyPuzzle.id,
@@ -473,80 +448,74 @@ router.post('/submit-result', (req, res) => {
       wrongAnswers || 0,
       JSON.stringify(hintBreakdown || {}),
       JSON.stringify(clueResults || [])
-    ], function(err) {
-      if (err) {
-        db.close();
-        return res.status(500).json({ error: 'Failed to save result' });
-      }
+    ]);
 
-      // Update daily puzzle statistics
-      db.run(`
-        UPDATE daily_puzzles 
-        SET plays = plays + 1,
-            avg_score = (
-              SELECT AVG(score) 
-              FROM game_results 
-              WHERE daily_puzzle_id = ?
-            ),
-            avg_time = (
-              SELECT AVG(completion_time) 
-              FROM game_results 
-              WHERE daily_puzzle_id = ?
-            )
-        WHERE id = ?
-      `, [dailyPuzzle.id, dailyPuzzle.id, dailyPuzzle.id], (err) => {
-        db.close();
-        
-        if (err) {
-          console.error('Error updating daily puzzle stats:', err);
-        }
+    const resultId = gameResultResult.rows[0].id;
 
-        res.json({
-          success: true,
-          resultId: this.lastID,
-          message: 'Result saved successfully'
-        });
-      });
+    // Update daily puzzle statistics
+    await pool.query(`
+      UPDATE daily_puzzles 
+      SET plays = plays + 1,
+          avg_score = (
+            SELECT AVG(score) 
+            FROM game_results 
+            WHERE daily_puzzle_id = $1
+          ),
+          avg_time = (
+            SELECT AVG(completion_time) 
+            FROM game_results 
+            WHERE daily_puzzle_id = $1
+          )
+      WHERE id = $1
+    `, [dailyPuzzle.id]);
+
+    res.json({
+      success: true,
+      resultId: resultId,
+      message: 'Result saved successfully'
     });
-  });
+  } catch (error) {
+    console.error('Error submitting result:', error);
+    res.status(500).json({ error: 'Failed to save result' });
+  }
 });
 
 // Get daily puzzle statistics (UPDATED)
-router.get('/stats/:date?', (req, res) => {
+router.get('/stats/:date?', async (req, res) => {
   const date = req.params.date || new Date().toISOString().split('T')[0];
-  const db = new sqlite3.Database(DB_PATH);
 
-  db.get(`
-    SELECT 
-      dp.date,
-      dp.plays,
-      dp.avg_score,
-      dp.avg_time,
-      dp.difficulty,
-      COUNT(gr.id) as total_completions,
-      AVG(gr.score) as actual_avg_score,
-      MIN(gr.score) as min_score,
-      MAX(gr.score) as max_score,
-      AVG(gr.completion_time) as actual_avg_time,
-      AVG(gr.hints_used) as avg_hints,
-      AVG(gr.wrong_answers) as avg_wrong_answers
-    FROM daily_puzzles dp
-    LEFT JOIN game_results gr ON dp.id = gr.daily_puzzle_id
-    WHERE dp.date = ?
-    GROUP BY dp.id
-  `, [date], (err, stats) => {
-    db.close();
+  try {
+    const statsResult = await pool.query(`
+      SELECT 
+        dp.date,
+        dp.plays,
+        dp.avg_score,
+        dp.avg_time,
+        dp.difficulty,
+        COUNT(gr.id) as total_completions,
+        AVG(gr.score) as actual_avg_score,
+        MIN(gr.score) as min_score,
+        MAX(gr.score) as max_score,
+        AVG(gr.completion_time) as actual_avg_time,
+        AVG(gr.hints_used) as avg_hints,
+        AVG(gr.wrong_answers) as avg_wrong_answers
+      FROM daily_puzzles dp
+      LEFT JOIN game_results gr ON dp.id = gr.daily_puzzle_id
+      WHERE dp.date = $1
+      GROUP BY dp.id, dp.date, dp.plays, dp.avg_score, dp.avg_time, dp.difficulty
+    `, [date]);
+
+    const stats = statsResult.rows[0];
     
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-
     if (!stats) {
       return res.status(404).json({ error: 'No daily puzzle found for this date' });
     }
 
     res.json(stats);
-  });
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Legacy endpoints for backward compatibility
@@ -559,44 +528,40 @@ router.post('/validate', (req, res) => {
 });
 
 // Get daily puzzle by date (admin only)
-router.get('/date/:date', requireAuth, (req, res) => {
+router.get('/date/:date', requireAuth, async (req, res) => {
   const { date } = req.params;
-  const db = new sqlite3.Database(DB_PATH);
 
-  // Get daily puzzle
-  db.get(`
-    SELECT * FROM daily_puzzles 
-    WHERE date = ?
-  `, [date], (err, dailyPuzzle) => {
-    if (err) {
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
-    }
+  try {
+    // Get daily puzzle
+    const dailyPuzzleResult = await pool.query(`
+      SELECT * FROM daily_puzzles 
+      WHERE date = $1
+    `, [date]);
+
+    const dailyPuzzle = dailyPuzzleResult.rows[0];
 
     if (!dailyPuzzle) {
-      db.close();
       return res.status(404).json({ error: 'Daily puzzle not found' });
     }
 
     // Get clues
-    db.all(`
+    const cluesResult = await pool.query(`
       SELECT clue_number, clue, answer, linking_word
       FROM puzzle_clues
-      WHERE daily_puzzle_id = ?
+      WHERE daily_puzzle_id = $1
       ORDER BY clue_number
-    `, [dailyPuzzle.id], (err, clues) => {
-      db.close();
-      
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
+    `, [dailyPuzzle.id]);
 
-      res.json({
-        ...dailyPuzzle,
-        clues: clues
-      });
+    const clues = cluesResult.rows;
+
+    res.json({
+      ...dailyPuzzle,
+      clues: clues
     });
-  });
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Simple auth middleware
