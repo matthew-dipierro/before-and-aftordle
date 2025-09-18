@@ -11,11 +11,20 @@
         <div class="header">
             <div class="logo">
                 <svg width="400" height="120" viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Phrasey text -->
                   <text x="20" y="75" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" 
                         font-size="48" font-weight="700" letter-spacing="-0.96" fill="#007AFF">Phrasey</text>
+                  
+                  <!-- Left circle (blue) - moved further right -->
                   <circle cx="220" cy="60" r="13" fill="none" stroke="#007AFF" stroke-width="5"/>
+                  
+                  <!-- Center circle (gray) -->
                   <circle cx="236" cy="60" r="18" fill="none" stroke="#6c757d" stroke-width="5"/>
+                  
+                  <!-- Right circle (orange) -->
                   <circle cx="252" cy="60" r="13" fill="none" stroke="#FF9500" stroke-width="5"/>
+                  
+                  <!-- Chain text - 11px after circles -->
                   <text x="276" y="75" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" 
                         font-size="48" font-weight="700" letter-spacing="-0.96" fill="#FF9500">Chain</text>
                 </svg>
@@ -55,12 +64,8 @@
             <div class="game-screen" id="gameScreen">
                 <div class="timer-section">
                     <div class="timer" id="timer">00:00</div>
-                    <div class="progress-segments" id="progressSegments">
-                        <div class="segment" data-segment="0"></div>
-                        <div class="segment" data-segment="1"></div>
-                        <div class="segment" data-segment="2"></div>
-                        <div class="segment" data-segment="3"></div>
-                        <div class="segment" data-segment="4"></div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress"></div>
                     </div>
                 </div>
                 
