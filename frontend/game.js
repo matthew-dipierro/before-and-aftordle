@@ -501,7 +501,9 @@ function revealCompleteAnswer(fullAnswer) {
 function showCelebrationAnswer(fullAnswer, linkingWord) {
     const display = document.getElementById('answerDisplay');
     const words = fullAnswer.split(' ');
-    const linkIndex = words.findIndex(word => word === linkingWord);
+    const linkIndex = words.findIndex((word, index) => 
+      word === linkingWord && index > 0 && index < words.length - 1
+    );
     
     let html = '<div class="letter-boxes celebration-reveal">';
     
@@ -528,7 +530,9 @@ function showCelebrationAnswer(fullAnswer, linkingWord) {
 function showCompleteAnswer(answer, linkingWord) {
     const display = document.getElementById('answerDisplay');
     const words = answer.split(' ');
-    const linkIndex = words.findIndex(word => word === linkingWord);
+    const linkIndex = words.findIndex((word, index) => 
+      word === linkingWord && index > 0 && index < words.length - 1
+    );
     
     let html = '<div class="letter-boxes">';
     
