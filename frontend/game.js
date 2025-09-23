@@ -854,7 +854,7 @@ function updateStats(score) {
 }
 
 function shareResults() {
-    const shareBtn = document.querySelector('.new-game-btn');
+    const shareBtn = document.querySelector('.share-results-btn');
     const originalText = shareBtn.textContent;
     
     shareBtn.textContent = "Coming Soon! 🎉";
