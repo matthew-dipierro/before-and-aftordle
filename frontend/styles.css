@@ -703,7 +703,7 @@ body {
     line-height: 1.6;
 }
 
-.new-game-btn {
+.share-results-btn {  /* was .new-game-btn */
     background: var(--primary-blue);
     color: white;
     border: none;
@@ -717,13 +717,13 @@ body {
     box-shadow: var(--shadow-small);
 }
 
-.new-game-btn:hover:not(:disabled) {
+.share-results-btn:hover:not(:disabled) {  /* was .new-game-btn:hover:not(:disabled) */
     background: #0056b3;
     transform: translateY(-1px);
     box-shadow: var(--shadow-medium);
 }
 
-.new-game-btn:disabled {
+.share-results-btn:disabled {  /* was .new-game-btn:disabled */
     background: var(--bg-tertiary);
     color: var(--text-secondary);
     cursor: not-allowed;
