@@ -603,6 +603,38 @@ body {
     }
 }
 
+/* ===== GUESS HISTORY ===== */
+.guess-history {
+    margin: var(--space-md) 0;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-small);
+    border-left: 3px solid var(--text-tertiary);
+}
+
+.guess-history-header {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-xs);
+    font-weight: 500;
+}
+
+.guess-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.guess-item {
+    font-family: 'Inter', system-ui, monospace;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--bg-primary);
+    border-radius: var(--radius-small);
+    border-left: 2px solid #FF3B30;
+}
+
 /* ===== RESULTS SCREEN ===== */
 .results-screen {
     display: none;
