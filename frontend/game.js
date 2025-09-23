@@ -853,19 +853,19 @@ function updateStats(score) {
     document.getElementById('bestScore').textContent = `${stats.bestScore}/100`;
 }
 
-function startNewGame() {
-    clearInterval(timerInterval);
+function shareResults() {
+    const shareBtn = document.querySelector('.new-game-btn');
+    const originalText = shareBtn.textContent;
     
-    const newGameBtn = document.querySelector('.new-game-btn');
-    newGameBtn.textContent = "Tomorrow's Puzzle Coming Soon!";
-    newGameBtn.disabled = true;
-    newGameBtn.style.background = '#6c757d';
+    shareBtn.textContent = "Coming Soon! 🎉";
+    shareBtn.disabled = true;
+    shareBtn.style.background = '#6c757d';
     
     setTimeout(() => {
-        newGameBtn.textContent = "Play Tomorrow's Puzzle";
-        newGameBtn.disabled = false;
-        newGameBtn.style.background = '#667eea';
-    }, 3000);
+        shareBtn.textContent = originalText;
+        shareBtn.disabled = false;
+        shareBtn.style.background = '#007AFF';
+    }, 2000);
 }
 
 // ===== EVENT LISTENERS =====
