@@ -860,6 +860,7 @@ function shareResults() {
     shareBtn.textContent = "Coming Soon! 🎉";
     shareBtn.disabled = true;
     shareBtn.style.background = '#6c757d';
+    shareBtn.style.color = 'white';
     
     setTimeout(() => {
         shareBtn.textContent = originalText;
