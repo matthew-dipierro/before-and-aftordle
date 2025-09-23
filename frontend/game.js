@@ -26,6 +26,7 @@ let puzzleClues = [];
 // Global state for tracking word hints per question
 let wordStates = []; // Array of arrays - one per question
 let structureRevealed = []; // Track if structure is revealed per question
+let guessHistory = []; // Array of arrays - one per question
 
 // ===== INITIALIZATION =====
 
@@ -127,6 +128,7 @@ function startGame() {
     hintPenalties = 0;
     wordStates = [];
     structureRevealed = [];
+    guessHistory = [];
     
     loadQuestion();
     startTimer();
@@ -145,6 +147,11 @@ function loadQuestion() {
     document.getElementById('answerInput').value = '';
     document.getElementById('answerInput').focus();
     document.getElementById('feedback').style.display = 'none';
+
+    // Initialize guess history for this question
+    while (guessHistory.length <= currentQuestion) {
+        guessHistory.push([]);
+    }
     
     updateProgress();
     updateDisplay();
@@ -256,6 +263,13 @@ async function checkAnswer() {
             }, 2500);
         } else {
             wrongAnswers++;
+            
+            // Track the wrong guess (newest first, limit to 5)
+            guessHistory[currentQuestion].unshift(userAnswer);
+            if (guessHistory[currentQuestion].length > 5) {
+                guessHistory[currentQuestion].pop(); // Remove oldest
+            }
+            
             showFeedback('Try again!', 'incorrect');
             document.getElementById('answerInput').value = '';
         }
