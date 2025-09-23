@@ -156,6 +156,8 @@ function loadQuestion() {
     updateProgress();
     updateDisplay();
     updateHintButton();
+    // Hide guess history for new question
+    document.getElementById('guessHistory').style.display = 'none';
 }
 
 function updateDisplay() {
@@ -269,6 +271,9 @@ async function checkAnswer() {
             if (guessHistory[currentQuestion].length > 5) {
                 guessHistory[currentQuestion].pop(); // Remove oldest
             }
+
+            // Update the display
+            updateGuessHistoryDisplay();
             
             showFeedback('Try again!', 'incorrect');
             document.getElementById('answerInput').value = '';
@@ -654,6 +659,25 @@ function showFeedback(message, type) {
             feedback.style.display = 'none';
         }
     }, duration);
+}
+
+function updateGuessHistoryDisplay() {
+    const historyContainer = document.getElementById('guessHistory');
+    const historyList = document.getElementById('guessHistoryList');
+    const currentGuesses = guessHistory[currentQuestion] || [];
+    
+    if (currentGuesses.length === 0) {
+        historyContainer.style.display = 'none';
+        return;
+    }
+    
+    // Show the container
+    historyContainer.style.display = 'block';
+    
+    // Build the list (newest first)
+    historyList.innerHTML = currentGuesses
+        .map(guess => `<div class="guess-item">❌ ${guess}</div>`)
+        .join('');
 }
 
 function updateProgress() {
