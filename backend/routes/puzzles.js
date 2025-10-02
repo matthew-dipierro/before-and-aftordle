@@ -3,9 +3,19 @@ const pool = require('../db-connection');
 
 const router = express.Router();
 
+// Helper function to get today's date in Eastern Time
+function getTodayEastern() {
+  const now = new Date();
+  const easternDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const year = easternDate.getFullYear();
+  const month = String(easternDate.getMonth() + 1).padStart(2, '0');
+  const day = String(easternDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // Get today's daily puzzle (UPDATED - returns 5 clues)
 router.get('/today', async (req, res) => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayEastern();
 
   try {
     // Get daily puzzle
@@ -65,7 +75,7 @@ router.get('/today', async (req, res) => {
 // Validate answer for specific clue (NEW)
 router.post('/validate-clue', async (req, res) => {
   const { clue_number, answer } = req.body;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayEastern();
   
   if (!clue_number || !answer || typeof answer !== 'string') {
     return res.status(400).json({ error: 'Clue number and answer are required' });
@@ -117,7 +127,7 @@ router.post('/validate-clue', async (req, res) => {
 // Get hint for specific clue (UPDATED - now supports word-specific hints)
 router.post('/get-hint', async (req, res) => {
   const { clue_number, word_index, hint_type } = req.body;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayEastern();
   
   // Validate input
   if (!clue_number) {
@@ -176,7 +186,9 @@ router.post('/get-hint', async (req, res) => {
 
 function generateWordSpecificHint(answer, linkingWord, wordIndex, hintType) {
   const words = answer.split(' ');
-  const linkIndex = words.findIndex(word => word === linkingWord);
+  const linkIndex = words.findIndex((word, index) => 
+    word === linkingWord && index > 0 && index < words.length - 1
+  );
   
   // If no word_index specified, return initial structure
   if (wordIndex === undefined) {
@@ -279,7 +291,7 @@ function generateWordSpecificHint(answer, linkingWord, wordIndex, hintType) {
 // New endpoint to get current hint state for a clue
 router.post('/get-hint-state', async (req, res) => {
   const { clue_number } = req.body;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayEastern();
   
   if (!clue_number) {
     return res.status(400).json({ error: 'Clue number is required' });
@@ -312,7 +324,9 @@ router.post('/get-hint-state', async (req, res) => {
     }
 
     const words = clue.answer.split(' ');
-    const linkIndex = words.findIndex(word => word === clue.linking_word);
+    const linkIndex = words.findIndex((word, index) => 
+      word === clue.linking_word && index > 0 && index < words.length - 1
+    );
     
     // Return clean state for frontend to manage
     const word_structure = words.map((word, index) => ({
@@ -338,7 +352,7 @@ router.post('/get-hint-state', async (req, res) => {
 // Validate all 5 answers at once (NEW)
 router.post('/validate-all', async (req, res) => {
   const { answers } = req.body;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayEastern();
   
   if (!answers || !Array.isArray(answers) || answers.length !== 5) {
     return res.status(400).json({ error: 'Exactly 5 answers are required' });
@@ -418,7 +432,7 @@ router.post('/submit-result', async (req, res) => {
     return res.status(400).json({ error: 'Score and completion time are required' });
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayEastern();
 
   try {
     // Get today's daily puzzle ID
@@ -482,7 +496,7 @@ router.post('/submit-result', async (req, res) => {
 
 // Get daily puzzle statistics (UPDATED)
 router.get('/stats/:date?', async (req, res) => {
-  const date = req.params.date || new Date().toISOString().split('T')[0];
+  const date = req.params.date || getTodayEastern();
 
   try {
     const statsResult = await pool.query(`
