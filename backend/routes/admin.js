@@ -4,6 +4,15 @@ const bcrypt = require('bcryptjs');
 
 const router = express.Router();
 
+function getTodayEastern() {
+  const now = new Date();
+  const easternDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const year = easternDate.getFullYear();
+  const month = String(easternDate.getMonth() + 1).padStart(2, '0');
+  const day = String(easternDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // Admin login
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
@@ -337,7 +346,7 @@ router.delete('/daily-puzzles/:id', requireAuth, async (req, res) => {
 
 // Get admin dashboard stats
 router.get('/dashboard', requireAuth, async (req, res) => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayEastern();
 
   try {
     const statsResult = await pool.query(`
