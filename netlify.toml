@@ -1,19 +1,4 @@
 [build]
-  # Build from the frontend folder
   base = "frontend"
-  
-  # No build command needed - static site
-  command = "echo 'Static site - no build needed'"
-  
-  # Publish the frontend folder
   publish = "."
-
-# Ignore the root package.json
-[build.environment]
-  NODE_VERSION = "18"
-
-# Don't try to install root dependencies during deploy
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-  [plugins.inputs]
-    target = "static"
+  command = ""
