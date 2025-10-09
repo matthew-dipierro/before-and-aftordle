@@ -11,7 +11,7 @@ export default defineConfig({
   
   use: {
     // Frontend runs on port 8000 (or wherever you serve it)
-    baseURL: 'http://localhost:8000',
+    baseURL: 'https://phraseychain.netlify.app/',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
