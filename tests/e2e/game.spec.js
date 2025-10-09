@@ -3,8 +3,8 @@
 import { test, expect } from '@playwright/test';
 
 // Test Configuration
-const BASE_URL = 'http://localhost:8000'; // Adjust to your local dev URL
-const API_BASE_URL = 'http://localhost:3001/api';
+const BASE_URL = 'https://phraseychain.netlify.app/';
+const API_BASE_URL = 'https://before-and-aftordle.onrender.com/api';
 
 test.describe('Phrasey Chain - Game Initialization & Puzzle Loading', () => {
   
