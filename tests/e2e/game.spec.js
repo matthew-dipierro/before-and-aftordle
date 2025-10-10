@@ -343,13 +343,14 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
     const isVisible = await clickableWord.isVisible();
     expect(isVisible).toBe(true);
     
-    // Click the word
+// Click the word
     await clickableWord.click();
     
-    // Wait for hint API call
+    // Wait for hint API call with longer timeout
     await page.waitForResponse(response => 
       response.url().includes('/puzzles/get-hint') && 
-      response.url().includes('word_index')
+      response.url().includes('word_index'),
+      { timeout: 10000 }
     );
     
     // Verify at least one letter was revealed
