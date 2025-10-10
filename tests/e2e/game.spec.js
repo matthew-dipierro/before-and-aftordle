@@ -4,7 +4,7 @@
 import { test, expect } from '@playwright/test';
 
 // Test Configuration
-const BASE_URL = 'https://phraseychain.com';
+const BASE_URL = 'https://phraseychain.netlify.app/';
 const API_BASE_URL = 'https://before-and-aftordle.onrender.com/api';
 
 test.describe('Phrasey Chain - Game Initialization & Puzzle Loading', () => {
