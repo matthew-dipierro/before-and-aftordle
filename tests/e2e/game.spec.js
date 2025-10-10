@@ -167,11 +167,16 @@ test.describe('Phrasey Chain - Game Start & Word Structure Display', () => {
 test.describe('Phrasey Chain - Word Structure Hint Display', () => {
   
   test.beforeEach(async ({ page }) => {
-    await page.goto(BASE_URL);
-    await page.waitForResponse(
+    // Set up listener BEFORE navigation to catch the API call
+    const responsePromise = page.waitForResponse(
       response => response.url().includes('/puzzles/today') && response.status() === 200,
-      { timeout: 10000 }
+      { timeout: 15000 }
     );
+    
+    await page.goto(BASE_URL);
+    await responsePromise; // Now wait for it
+    
+    await page.waitForTimeout(500); // Small buffer for UI to settle
     await page.locator('.start-btn').click();
   });
 
@@ -323,29 +328,32 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
 // Smoke test
 test.describe('Phrasey Chain - Complete Game Flow (Smoke Test)', () => {
   
-  test('should complete full game initialization and first hint flow @smoke', async ({ page }) => {
-    // 1. Load intro screen
-    await page.goto(BASE_URL);
-    await expect(page.locator('#introScreen')).toBeVisible();
-    
-    // 2. Wait for puzzle to load
-    const apiResponse = await page.waitForResponse(
+test('should complete full game initialization and first hint flow @smoke', async ({ page }) => {
+    // 1. Set up listener BEFORE navigation
+    const apiPromise = page.waitForResponse(
       response => response.url().includes('/puzzles/today') && response.status() === 200,
       { timeout: 15000 }
     );
+    
+    // 2. Load intro screen
+    await page.goto(BASE_URL);
+    await expect(page.locator('#introScreen')).toBeVisible();
+    
+    // 3. Wait for puzzle to load
+    const apiResponse = await apiPromise;
     const puzzleData = await apiResponse.json();
     expect(puzzleData.clues).toHaveLength(5);
     
-    // 3. Start game
+    // 4. Start game
     await page.locator('.start-btn').click();
     await expect(page.locator('#gameScreen')).toBeVisible();
     
-    // 4. Verify first question loaded
+    // 5. Verify first question loaded
     await expect(page.locator('#questionNumber')).toContainText('Question 1 of 5');
     const clueText = await page.locator('#clue').textContent();
     expect(clueText.length).toBeGreaterThan(0);
     
-    // 5. Reveal word structure
+    // 6. Reveal word structure
     await page.locator('#hintBtn').click();
     await page.waitForResponse(
       response => response.url().includes('/puzzles/get-hint'),
@@ -353,12 +361,12 @@ test.describe('Phrasey Chain - Complete Game Flow (Smoke Test)', () => {
     );
     await page.waitForTimeout(1000);
     
-    // 6. Verify structure displayed correctly
+    // 7. Verify structure displayed correctly
     const letterBoxes = page.locator('.letter-box');
     const boxCount = await letterBoxes.count();
     expect(boxCount).toBeGreaterThan(0);
     
-    // 7. Verify hint button disabled
+    // 8. Verify hint button disabled
     await expect(page.locator('#hintBtn')).toBeDisabled();
     
     console.log('✅ SMOKE TEST PASSED - Complete flow working');
