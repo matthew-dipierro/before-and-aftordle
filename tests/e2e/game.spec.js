@@ -333,10 +333,11 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
     await page.waitForResponse(response => 
       response.url().includes('/puzzles/get-hint')
     );
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000); // Increased wait for animation
     
-    // Find a clickable word (non-linking)
+    // Find a clickable word (non-linking) - wait for it to be visible
     const clickableWord = page.locator('.word-group.clickable-word').first();
+    await clickableWord.waitFor({ state: 'visible', timeout: 5000 });
     
     // Verify it's clickable
     const isVisible = await clickableWord.isVisible();
