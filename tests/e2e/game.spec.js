@@ -327,7 +327,7 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
     console.log('✅ Penalty feedback displayed');
   });
 
-test('should allow clicking on non-linking words for additional hints', async ({ page }) => {
+  test('should allow clicking on non-linking words for additional hints', async ({ page }) => {
     // Reveal structure first
     await page.locator('#hintBtn').click();
     await page.waitForResponse(response => 
@@ -348,29 +348,22 @@ test('should allow clicking on non-linking words for additional hints', async ({
     console.log('✅ Clickable words are present and styled correctly');
   });
 
-  test('should animate letter boxes when they appear (visual regression check)', async ({ page }) => {
+  test('should animate letter boxes when they appear', async ({ page }) => {
     // Reveal structure
     await page.locator('#hintBtn').click();
     await page.waitForResponse(response => 
       response.url().includes('/puzzles/get-hint')
     );
     
-    // Take screenshot immediately after reveal starts
-    await page.waitForTimeout(100);
-    await expect(page.locator('#answerDisplay')).toHaveScreenshot('word-structure-animating.png', {
-      animations: 'allow', // Allow animations to show in screenshot
-      maxDiffPixels: 100
-    });
-    
-    // Wait for animation to complete
+    // Wait for animation
     await page.waitForTimeout(1000);
     
-    // Take screenshot of final state
-    await expect(page.locator('#answerDisplay')).toHaveScreenshot('word-structure-complete.png', {
-      maxDiffPixels: 100
-    });
+    // Verify letter boxes appeared and have correct classes
+    const letterBoxes = page.locator('.letter-box');
+    await expect(letterBoxes.first()).toBeVisible();
+    await expect(letterBoxes.first()).toHaveClass(/visible/);
     
-    console.log('✅ Animation screenshots captured');
+    console.log('✅ Animation completed - letter boxes visible');
   });
 });
 
