@@ -579,38 +579,6 @@ router.get('/date/:date', requireAuth, async (req, res) => {
 });
 
 // Test endpoint - returns answers for automated testing (requires admin auth)
-router.get('/puzzles/:id/test-answers', requireAuth, async (req, res) => {
-  try {
-    const puzzleId = req.params.id;
-    
-    // Get the puzzle
-    const puzzle = await db.get(
-      'SELECT * FROM puzzles WHERE id = ?',
-      [puzzleId]
-    );
-    
-    if (!puzzle) {
-      return res.status(404).json({ error: 'Puzzle not found' });
-    }
-    
-    // Get clues with answers
-    const clues = await db.all(
-      'SELECT clue_number, answer FROM clues WHERE puzzle_id = ? ORDER BY clue_number',
-      [puzzleId]
-    );
-    
-    res.json({ 
-      puzzle_id: puzzle.id,
-      date: puzzle.date,
-      answers: clues 
-    });
-  } catch (error) {
-    console.error('Error fetching test answers:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Test endpoint - returns answers for automated testing (requires admin auth)
 router.get('/:id/test-answers', requireAuth, async (req, res) => {
   const puzzleId = req.params.id;
   
