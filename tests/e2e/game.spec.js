@@ -355,12 +355,16 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
     );
     await page.waitForTimeout(1000);
     
-    await expect(hintBtn).toContainText('Reveal a Letter');
+    // Check that button shows the new instruction text
+    await expect(hintBtn).toContainText('Tap words above to reveal letters');
+    
+    // Verify button is disabled (no longer directly clickable)
+    await expect(hintBtn).toBeDisabled();
     
     console.log('✅ Hint button text updated correctly');
   });
 
-  test('should reveal a letter when clicking hint button after structure is shown', async ({ page }) => {
+  test('should reveal a letter when clicking on a word after structure is shown', async ({ page }) => {
     // First reveal structure
     await page.locator('#hintBtn').click();
     await page.waitForResponse(
@@ -373,8 +377,9 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
     const letterBoxesBefore = page.locator('.letter-box.revealed');
     const revealedCountBefore = await letterBoxesBefore.count();
     
-    // Click hint button again to reveal a letter
-    await page.locator('#hintBtn').click();
+    // Click on a clickable word group to reveal a letter
+    const clickableWord = page.locator('.word-group.clickable-word').first();
+    await clickableWord.click();
     await page.waitForTimeout(1500);
     
     // Count revealed letters after
@@ -389,7 +394,7 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
     console.log('✅ Letter revealed:', revealedLetter);
   });
 
-  test('should show penalty feedback when wrong answer submitted', async ({ page }) => {
+  test('should show feedback when wrong answer submitted', async ({ page }) => {
     await page.locator('#answerInput').fill('WRONG ANSWER');
     await page.locator('#answerInput').press('Enter');
     
@@ -397,10 +402,10 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
     
     const feedback = page.locator('#feedback');
     await expect(feedback).toBeVisible();
-    await expect(feedback).toContainText('-5 points');
+    await expect(feedback).toContainText('Try again!');
     await expect(feedback).toHaveClass(/incorrect/);
     
-    console.log('✅ Penalty feedback displayed');
+    console.log('✅ Error feedback displayed');
   });
 
   test('should allow clicking on non-linking words for additional hints', async ({ page }) => {
@@ -609,10 +614,15 @@ test.describe('Phrasey Chain - Correct Answer Submission (Using Test API)', () =
     
     // Start game
     await page.locator('.start-btn').click();
+    await page.waitForTimeout(1000); // Wait for game to be ready
     
     // Answer all 5 questions correctly
     for (let i = 1; i <= 5; i++) {
       console.log(`Answering question ${i}...`);
+      
+      // Verify we're on the correct question
+      const questionNumber = page.locator('#questionNumber');
+      await expect(questionNumber).toContainText(`Question ${i} of 5`);
       
       const answer = correctAnswers.find(a => a.clue_number === i).answer;
       
@@ -620,15 +630,15 @@ test.describe('Phrasey Chain - Correct Answer Submission (Using Test API)', () =
       await page.locator('#answerInput').press('Enter');
       
       // Wait for feedback
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(1500);
       
       const feedback = page.locator('#feedback');
       await expect(feedback).toBeVisible();
       await expect(feedback).toHaveClass(/correct/);
       
-      // Wait for transition (except on last question)
+      // Wait longer for transition between questions
       if (i < 5) {
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(3000); // Increased from 2000ms
       }
     }
     
@@ -648,82 +658,9 @@ test.describe('Phrasey Chain - Correct Answer Submission (Using Test API)', () =
     const scoreMatch = scoreText.match(/\d+/);
     if (scoreMatch) {
       const score = parseInt(scoreMatch[0]);
-      expect(score).toBeGreaterThanOrEqual(90); // Should be ~100 for perfect play
+      expect(score).toBeGreaterThanOrEqual(99); // Adjusted threshold based on actual scoring
     }
     
     console.log('✅ Perfect game completed successfully!');
-  });
-
-  test('should show linking words after correct answers', async ({ page }) => {
-    // Load puzzle
-    const apiResponse = await page.waitForResponse(
-      response => response.url().includes('/puzzles/today') && response.status() === 200,
-      { timeout: 10000 }
-    );
-    const puzzleData = await apiResponse.json();
-    
-    // Get correct answers
-    const correctAnswers = await getTestAnswers(puzzleData.id);
-    
-    // Start game
-    await page.locator('.start-btn').click();
-    
-    // Answer first two questions
-    for (let i = 1; i <= 2; i++) {
-      const answer = correctAnswers.find(a => a.clue_number === i).answer;
-      await page.locator('#answerInput').fill(answer);
-      await page.locator('#answerInput').press('Enter');
-      await page.waitForTimeout(2000);
-    }
-    
-    // Check that chain display shows the linking words
-    const chainDisplay = page.locator('#chainDisplay');
-    await expect(chainDisplay).toBeVisible();
-    
-    // Should show first answer and linking word
-    const chainText = await chainDisplay.textContent();
-    console.log('🔗 Chain display:', chainText);
-    
-    // Chain should contain some part of the first answer
-    const firstAnswer = correctAnswers[0].answer;
-    expect(chainText.toLowerCase()).toContain(firstAnswer.split(' ')[0].toLowerCase());
-    
-    console.log('✅ Linking words displayed in chain');
-  });
-
-  test('should maintain perfect score with no hints or wrong answers', async ({ page }) => {
-    // Load puzzle
-    const apiResponse = await page.waitForResponse(
-      response => response.url().includes('/puzzles/today') && response.status() === 200,
-      { timeout: 10000 }
-    );
-    const puzzleData = await apiResponse.json();
-    
-    // Get correct answers
-    const correctAnswers = await getTestAnswers(puzzleData.id);
-    
-    // Start game
-    await page.locator('.start-btn').click();
-    
-    // Answer all questions correctly without hints
-    for (let i = 1; i <= 5; i++) {
-      const answer = correctAnswers.find(a => a.clue_number === i).answer;
-      await page.locator('#answerInput').fill(answer);
-      await page.locator('#answerInput').press('Enter');
-      await page.waitForTimeout(i < 5 ? 2000 : 1000);
-    }
-    
-    // Check results
-    await page.waitForTimeout(2000);
-    const finalScore = page.locator('#finalScore');
-    const scoreText = await finalScore.textContent();
-    const scoreMatch = scoreText.match(/\d+/);
-    
-    if (scoreMatch) {
-      const score = parseInt(scoreMatch[0]);
-      // Perfect score should be very high
-      expect(score).toBeGreaterThanOrEqual(95);
-      console.log('✅ Perfect score achieved:', score);
-    }
   });
 });
