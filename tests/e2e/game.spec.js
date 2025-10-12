@@ -13,25 +13,25 @@ test.describe('Phrasey Chain - Game Initialization & Puzzle Loading', () => {
   });
 
   test('should display the intro screen with game title and instructions', async ({ page }) => {
-    // Verify the logo/title is visible
-    await expect(page.locator('.logo')).toBeVisible();
-    
-    // Verify subtitle is visible (text changes after puzzle loads)
+    // Locate the elements we want to verify
+    const logo = page.locator('.logo');
     const subtitle = page.locator('.subtitle');
-    await expect(subtitle).toBeVisible();
-    
-    // Verify "How to Play" section exists
-    await expect(page.locator('.how-to-play')).toBeVisible();
-    
-    // Verify the Start button is present and enabled
+    const howToPlay = page.locator('.how-to-play');
     const startBtn = page.locator('.start-btn');
+    
+    // Page already loaded in beforeEach
+    
+    // Verify all intro screen elements are visible and correct
+    await expect(logo).toBeVisible();
+    await expect(subtitle).toBeVisible();
+    await expect(howToPlay).toBeVisible();
     await expect(startBtn).toBeVisible();
     await expect(startBtn).toBeEnabled();
     await expect(startBtn).toContainText('Start');
   });
 
   test('should load today\'s puzzle from the API successfully', async ({ page }) => {
-    // Wait for the API call with longer timeout
+    // Set up API response listener then wait for the API call with a timeout
     const apiResponse = await page.waitForResponse(
       response => response.url().includes('/puzzles/today') && response.status() === 200,
       { timeout: 10000 }
@@ -104,20 +104,29 @@ test.describe('Phrasey Chain - Game Start & Word Structure Display', () => {
   });
 
   test('should transition from intro to game screen when Start button clicked', async ({ page }) => {
-    await expect(page.locator('#introScreen')).toBeVisible();
-    await expect(page.locator('#gameScreen')).not.toBeVisible();
+    // Locate screens and verify initial state
+    const introScreen = page.locator('#introScreen');
+    const gameScreen = page.locator('#gameScreen');
+    await expect(introScreen).toBeVisible();
+    await expect(gameScreen).not.toBeVisible();
     
+    // Click the start button
     await page.locator('.start-btn').click();
     
-    await expect(page.locator('#introScreen')).not.toBeVisible();
-    await expect(page.locator('#gameScreen')).toBeVisible();
+    // Verify screen transition occurred
+    await expect(introScreen).not.toBeVisible();
+    await expect(gameScreen).toBeVisible();
     
     console.log('✅ Successfully transitioned to game screen');
   });
 
   test('should display first question with clue text and input field', async ({ page }) => {
+    // Start the game by clicking start button
     await page.locator('.start-btn').click();
     
+    // Game loads first question automatically
+    
+    // Verify all question elements are present and correct
     const questionNumber = page.locator('#questionNumber');
     await expect(questionNumber).toContainText('Question 1 of 5');
     
@@ -166,7 +175,7 @@ test.describe('Phrasey Chain - Game Start & Word Structure Display', () => {
 test.describe('Phrasey Chain - Word Structure Hint Display', () => {
   
   test.beforeEach(async ({ page }) => {
-    // Set up listener BEFORE navigation to catch the API call
+    // Set up listener before navigation to catch the API call
     const responsePromise = page.waitForResponse(
       response => response.url().includes('/puzzles/today') && response.status() === 200,
       { timeout: 15000 }
@@ -180,25 +189,31 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
   });
 
   test('should reveal word structure when hint button clicked', async ({ page }) => {
+    // Locate the hint button
     const hintBtn = page.locator('#hintBtn');
     
+    // Click the hint button
     await hintBtn.click();
     
+    // Wait for API to respond
     await page.waitForResponse(
       response => response.url().includes('/puzzles/get-hint') && response.status() === 200,
       { timeout: 10000 }
     );
     
+    // Wait for animation to complete
     await page.waitForTimeout(1000);
     
+    // Verify letter boxes appeared
     const letterBoxes = page.locator('.letter-box');
     const boxCount = await letterBoxes.count();
-    expect(boxCount).toBeGreaterThan(0);
+    expect(boxCount).toBeGreaterThan(0); // At least 1 box should exist
     
     console.log('✅ Word structure revealed with', boxCount, 'letter boxes');
   });
 
   test('should display letter boxes with proper structure and styling', async ({ page }) => {
+    // Reveal the word structure
     await page.locator('#hintBtn').click();
     await page.waitForResponse(
       response => response.url().includes('/puzzles/get-hint'),
@@ -206,10 +221,12 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
     );
     await page.waitForTimeout(1000);
     
+    // Verify word groups exist
     const wordGroups = page.locator('.word-group');
     const groupCount = await wordGroups.count();
     expect(groupCount).toBeGreaterThan(0);
     
+    // Verify letter boxes have correct styling
     const letterBoxes = page.locator('.letter-box');
     const firstBox = letterBoxes.first();
     
@@ -246,8 +263,10 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
   });
 
   test('should update hint button state after structure revealed', async ({ page }) => {
+    // Locate hint button
     const hintBtn = page.locator('#hintBtn');
     
+    // Click hint button and wait for response
     await hintBtn.click();
     await page.waitForResponse(
       response => response.url().includes('/puzzles/get-hint'),
@@ -255,13 +274,14 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
     );
     await page.waitForTimeout(500);
     
+    // Verify button state changed
     await expect(hintBtn).toBeDisabled();
     await expect(hintBtn).toContainText('Tap words above');
     
     const bgColor = await hintBtn.evaluate(el => 
       window.getComputedStyle(el).backgroundColor
     );
-    expect(bgColor).not.toContain('0, 122, 255');
+    expect(bgColor).not.toContain('0, 122, 255'); // No longer blue
     
     console.log('✅ Hint button state updated correctly');
   });
@@ -283,7 +303,7 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
   });
 
   test('should allow clicking on non-linking words for additional hints', async ({ page }) => {
-    // Reveal structure first
+    // Reveal word structure first
     await page.locator('#hintBtn').click();
     await page.waitForResponse(
       response => response.url().includes('/puzzles/get-hint'),
@@ -291,7 +311,7 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
     );
     await page.waitForTimeout(2000);
     
-    // Verify clickable words exist
+    // Verify clickable words exist and have correct styling
     const clickableWords = page.locator('.word-group.clickable-word');
     await expect(clickableWords.first()).toBeVisible();
     
@@ -305,17 +325,17 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
   });
 
   test('should animate letter boxes when they appear', async ({ page }) => {
-    // Reveal structure
+    // Reveal word structure first
     await page.locator('#hintBtn').click();
     await page.waitForResponse(
       response => response.url().includes('/puzzles/get-hint'),
       { timeout: 10000 }
     );
     
-    // Wait for animation
+    // Wait for animation to complete
     await page.waitForTimeout(1000);
     
-    // Verify letter boxes appeared and have correct classes
+    // Verify letter boxes appeared with animation classes
     const letterBoxes = page.locator('.letter-box');
     await expect(letterBoxes.first()).toBeVisible();
     await expect(letterBoxes.first()).toHaveClass(/visible/);
@@ -324,35 +344,41 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
   });
 });
 
-// Smoke test
+// Smoke test - validates the complete critical path
 test.describe('Phrasey Chain - Complete Game Flow (Smoke Test)', () => {
   
-test('should complete full game initialization and first hint flow @smoke', async ({ page }) => {
-    // 1. Set up listener BEFORE navigation
+  test('should complete full game initialization and first hint flow @smoke', async ({ page }) => {
+    // Set up API listener before navigation
     const apiPromise = page.waitForResponse(
       response => response.url().includes('/puzzles/today') && response.status() === 200,
       { timeout: 15000 }
     );
     
-    // 2. Load intro screen
+    // Load intro screen
     await page.goto(BASE_URL);
+    
+    // Verify intro screen visible
     await expect(page.locator('#introScreen')).toBeVisible();
     
-    // 3. Wait for puzzle to load
+    // Wait for puzzle to load
     const apiResponse = await apiPromise;
     const puzzleData = await apiResponse.json();
+    
+    // Verify puzzle structure
     expect(puzzleData.clues).toHaveLength(5);
     
-    // 4. Start game
+    // Start game
     await page.locator('.start-btn').click();
+    
+    // Verify game screen appeared
     await expect(page.locator('#gameScreen')).toBeVisible();
     
-    // 5. Verify first question loaded
+    // Verify first question loaded
     await expect(page.locator('#questionNumber')).toContainText('Question 1 of 5');
     const clueText = await page.locator('#clue').textContent();
     expect(clueText.length).toBeGreaterThan(0);
     
-    // 6. Reveal word structure
+    // Reveal word structure
     await page.locator('#hintBtn').click();
     await page.waitForResponse(
       response => response.url().includes('/puzzles/get-hint'),
@@ -360,12 +386,12 @@ test('should complete full game initialization and first hint flow @smoke', asyn
     );
     await page.waitForTimeout(1000);
     
-    // 7. Verify structure displayed correctly
+    // Verify structure displayed correctly
     const letterBoxes = page.locator('.letter-box');
     const boxCount = await letterBoxes.count();
     expect(boxCount).toBeGreaterThan(0);
     
-    // 8. Verify hint button disabled
+    // Verify hint button disabled
     await expect(page.locator('#hintBtn')).toBeDisabled();
     
     console.log('✅ SMOKE TEST PASSED - Complete flow working');
