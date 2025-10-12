@@ -1,9 +1,8 @@
-// Phrasey Chain - Automated Test Suite (Fixed Version)
-// Using Playwright for end-to-end testing
+// Phrasey Chain automated tests using Playwright
 
 import { test, expect } from '@playwright/test';
 
-// Test Configuration
+// Test config
 const BASE_URL = 'https://phraseychain.netlify.app/';
 const API_BASE_URL = 'https://before-and-aftordle.onrender.com/api';
 
