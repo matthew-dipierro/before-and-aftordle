@@ -610,6 +610,42 @@ router.get('/puzzles/:id/test-answers', requireAuth, async (req, res) => {
   }
 });
 
+// Test endpoint - returns answers for automated testing (requires admin auth)
+router.get('/:id/test-answers', requireAuth, async (req, res) => {
+  const puzzleId = req.params.id;
+  
+  try {
+    // Get the puzzle
+    const puzzleResult = await pool.query(
+      'SELECT * FROM daily_puzzles WHERE id = $1',
+      [puzzleId]
+    );
+    
+    const puzzle = puzzleResult.rows[0];
+    
+    if (!puzzle) {
+      return res.status(404).json({ error: 'Puzzle not found' });
+    }
+    
+    // Get clues with answers
+    const cluesResult = await pool.query(
+      'SELECT clue_number, answer FROM puzzle_clues WHERE daily_puzzle_id = $1 ORDER BY clue_number',
+      [puzzleId]
+    );
+    
+    const clues = cluesResult.rows;
+    
+    res.json({ 
+      puzzle_id: puzzle.id,
+      date: puzzle.date,
+      answers: clues 
+    });
+  } catch (error) {
+    console.error('Error fetching test answers:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Simple auth middleware
 function requireAuth(req, res, next) {
   const token = req.header('Authorization')?.replace('Bearer ', '');
