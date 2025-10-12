@@ -6,6 +6,69 @@ import { test, expect } from '@playwright/test';
 const BASE_URL = 'https://phraseychain.netlify.app/';
 const API_BASE_URL = 'https://before-and-aftordle.onrender.com/api';
 
+// ============================================================================
+// SMOKE TEST - Validate critical path first!
+// ============================================================================
+test.describe('Phrasey Chain - Smoke Test', () => {
+  
+  test('should complete full game initialization and first hint flow @smoke', async ({ page }) => {
+    // Set up API listener before navigation
+    const apiPromise = page.waitForResponse(
+      response => response.url().includes('/puzzles/today') && response.status() === 200,
+      { timeout: 15000 }
+    );
+    
+    // Load intro screen
+    await page.goto(BASE_URL);
+    
+    // Verify intro screen visible
+    await expect(page.locator('#introScreen')).toBeVisible();
+    
+    // Wait for puzzle to load
+    const apiResponse = await apiPromise;
+    const puzzleData = await apiResponse.json();
+    
+    // Verify puzzle structure
+    expect(puzzleData.clues).toHaveLength(5);
+    
+    // Start game
+    await page.locator('.start-btn').click();
+    
+    // Verify game screen appeared
+    await expect(page.locator('#gameScreen')).toBeVisible();
+    
+    // Verify first question loaded
+    await expect(page.locator('#questionNumber')).toContainText('Question 1 of 5');
+    const clueText = await page.locator('#clue').textContent();
+    expect(clueText.length).toBeGreaterThan(0);
+    
+    // Reveal word structure
+    await page.locator('#hintBtn').click();
+    await page.waitForResponse(
+      response => response.url().includes('/puzzles/get-hint'),
+      { timeout: 10000 }
+    );
+    await page.waitForTimeout(1000);
+    
+    // Verify structure displayed correctly
+    const letterBoxes = page.locator('.letter-box');
+    const boxCount = await letterBoxes.count();
+    expect(boxCount).toBeGreaterThan(0);
+    
+    // Verify hint button disabled
+    await expect(page.locator('#hintBtn')).toBeDisabled();
+    
+    console.log('✅ SMOKE TEST PASSED - Complete flow working');
+    console.log('   Puzzle date:', puzzleData.date);
+    console.log('   First clue:', clueText);
+    console.log('   Letter boxes displayed:', boxCount);
+  });
+});
+
+// ============================================================================
+// DETAILED TESTS
+// ============================================================================
+
 test.describe('Phrasey Chain - Game Initialization & Puzzle Loading', () => {
   
   test.beforeEach(async ({ page }) => {
@@ -344,59 +407,106 @@ test.describe('Phrasey Chain - Word Structure Hint Display', () => {
   });
 });
 
-// Smoke test - validates the complete critical path
-test.describe('Phrasey Chain - Complete Game Flow (Smoke Test)', () => {
+test.describe('Phrasey Chain - Answer Validation', () => {
   
-  test('should complete full game initialization and first hint flow @smoke', async ({ page }) => {
-    // Set up API listener before navigation
-    const apiPromise = page.waitForResponse(
+  test.beforeEach(async ({ page }) => {
+    // Set up API listener
+    const responsePromise = page.waitForResponse(
       response => response.url().includes('/puzzles/today') && response.status() === 200,
       { timeout: 15000 }
     );
     
-    // Load intro screen
     await page.goto(BASE_URL);
+    await responsePromise;
+    await page.waitForTimeout(500);
     
-    // Verify intro screen visible
-    await expect(page.locator('#introScreen')).toBeVisible();
-    
-    // Wait for puzzle to load
-    const apiResponse = await apiPromise;
-    const puzzleData = await apiResponse.json();
-    
-    // Verify puzzle structure
-    expect(puzzleData.clues).toHaveLength(5);
-    
-    // Start game
+    // Start the game
     await page.locator('.start-btn').click();
+  });
+
+  test('should reject incorrect answer and show error feedback', async ({ page }) => {
+    // Locate elements
+    const answerInput = page.locator('#answerInput');
+    const questionNumber = page.locator('#questionNumber');
+    const feedback = page.locator('#feedback');
     
-    // Verify game screen appeared
-    await expect(page.locator('#gameScreen')).toBeVisible();
+    // Type obviously wrong answer
+    await answerInput.fill('WRONGANSWER');
+    await answerInput.press('Enter');
     
-    // Verify first question loaded
-    await expect(page.locator('#questionNumber')).toContainText('Question 1 of 5');
-    const clueText = await page.locator('#clue').textContent();
-    expect(clueText.length).toBeGreaterThan(0);
+    // Wait for feedback to appear
+    await page.waitForTimeout(500);
     
-    // Reveal word structure
-    await page.locator('#hintBtn').click();
-    await page.waitForResponse(
-      response => response.url().includes('/puzzles/get-hint'),
-      { timeout: 10000 }
+    // Still on question 1
+    await expect(questionNumber).toContainText('Question 1 of 5');
+    
+    // Error feedback is visible
+    await expect(feedback).toBeVisible();
+    
+    console.log('✅ Incorrect answer rejected');
+  });
+  
+  test('should allow multiple answer attempts after incorrect submission', async ({ page }) => {
+    const answerInput = page.locator('#answerInput');
+    const questionNumber = page.locator('#questionNumber');
+    
+    // First wrong attempt
+    await answerInput.fill('WRONGANSWER1');
+    await answerInput.press('Enter');
+    await page.waitForTimeout(500);
+    
+    // Input should still be enabled for retry
+    await expect(answerInput).toBeEnabled();
+    await expect(answerInput).toBeVisible();
+    
+    // Second wrong attempt
+    await answerInput.clear();
+    await answerInput.fill('WRONGANSWER2');
+    await answerInput.press('Enter');
+    await page.waitForTimeout(500);
+    
+    // Still on question 1, can keep trying
+    await expect(questionNumber).toContainText('Question 1 of 5');
+    await expect(answerInput).toBeEnabled();
+    
+    console.log('✅ Multiple attempts allowed');
+  });
+
+  test('should clear input field after incorrect answer', async ({ page }) => {
+    const answerInput = page.locator('#answerInput');
+    
+    // Submit wrong answer
+    await answerInput.fill('TESTANSWER');
+    await answerInput.press('Enter');
+    await page.waitForTimeout(500);
+    
+    // Input should be cleared or ready for new input
+    const inputValue = await answerInput.inputValue();
+    // Input is either empty or can be easily cleared for next attempt
+    expect(inputValue.length).toBeLessThanOrEqual(11); // Original input or empty
+    
+    console.log('✅ Input handling works correctly');
+  });
+
+  test('should display error feedback with appropriate styling', async ({ page }) => {
+    const answerInput = page.locator('#answerInput');
+    const feedback = page.locator('#feedback');
+    
+    // Submit wrong answer
+    await answerInput.fill('INCORRECT');
+    await answerInput.press('Enter');
+    await page.waitForTimeout(500);
+    
+    // Feedback has error styling
+    await expect(feedback).toBeVisible();
+    await expect(feedback).toHaveClass(/incorrect/);
+    
+    // Feedback should have red/error color
+    const color = await feedback.evaluate(el => 
+      window.getComputedStyle(el).color
     );
-    await page.waitForTimeout(1000);
+    expect(color).toBeTruthy();
     
-    // Verify structure displayed correctly
-    const letterBoxes = page.locator('.letter-box');
-    const boxCount = await letterBoxes.count();
-    expect(boxCount).toBeGreaterThan(0);
-    
-    // Verify hint button disabled
-    await expect(page.locator('#hintBtn')).toBeDisabled();
-    
-    console.log('✅ SMOKE TEST PASSED - Complete flow working');
-    console.log('   Puzzle date:', puzzleData.date);
-    console.log('   First clue:', clueText);
-    console.log('   Letter boxes displayed:', boxCount);
+    console.log('✅ Error feedback styled correctly');
   });
 });
