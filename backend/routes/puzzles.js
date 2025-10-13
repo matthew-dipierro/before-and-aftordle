@@ -416,7 +416,7 @@ router.post('/validate-all', async (req, res) => {
   }
 });
 
-// Submit daily game result (UPDATED)
+// Submit daily game result (UPDATED with test flag)
 router.post('/submit-result', async (req, res) => {
   const {
     score,
@@ -425,11 +425,21 @@ router.post('/submit-result', async (req, res) => {
     wrongAnswers,
     hintBreakdown,
     clueResults,
-    userId // Optional - for logged in users
+    userId, // Optional - for logged in users
+    isTest  // NEW: Flag to mark test plays
   } = req.body;
 
   if (!score || !completionTime) {
     return res.status(400).json({ error: 'Score and completion time are required' });
+  }
+
+  // Don't save test results - just acknowledge them
+  if (isTest) {
+    return res.json({
+      success: true,
+      isTest: true,
+      message: 'Test result acknowledged but not saved to statistics'
+    });
   }
 
   const today = getTodayEastern();
