@@ -808,19 +808,30 @@ async function submitResults(score, completionTime) {
             hints_used: hints
         }));
         
+        // Check if running in test mode (via URL parameter or window property)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isTest = urlParams.has('testMode') || window.isTestMode === true;
+        
         const response = await fetch(`${API_BASE}/puzzles/submit-result`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                score, completionTime, hintsUsed: totalHintsUsed, wrongAnswers,
+                score, 
+                completionTime, 
+                hintsUsed: totalHintsUsed, 
+                wrongAnswers,
                 hintBreakdown: { total: hintPenalties, per_clue: questionHints },
-                clueResults
+                clueResults,
+                isTest  // NEW: Flag to exclude from stats
             })
         });
         
         const result = await response.json();
         if (result.success) {
             console.log('Results submitted successfully:', result);
+            if (result.isTest) {
+                console.log('🧪 Test mode: Result not saved to statistics');
+            }
         }
     } catch (error) {
         console.error('Error submitting results:', error);
