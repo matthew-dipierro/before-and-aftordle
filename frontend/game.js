@@ -1,4 +1,4 @@
-// API Configuration
+// API Configuration 
 // Auto-detect environment
 const API_BASE = (window.location.hostname === 'localhost' || 
                   window.location.protocol === 'file:' ||
