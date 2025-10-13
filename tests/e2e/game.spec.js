@@ -35,8 +35,11 @@ test.describe('Phrasey Chain - Smoke Test', () => {
       { timeout: 15000 }
     );
     
-    // Load intro screen
-    await page.goto(BASE_URL);
+    // Load intro screen in test mode
+    await page.goto(`${BASE_URL}?testMode=true`);
+    await page.evaluate(() => {
+      window.isTestMode = true;
+    });
     
     // Verify intro screen visible
     await expect(page.locator('#introScreen')).toBeVisible();
@@ -89,7 +92,10 @@ test.describe('Phrasey Chain - Smoke Test', () => {
 test.describe('Phrasey Chain - Game Initialization & Puzzle Loading', () => {
   
   test.beforeEach(async ({ page }) => {
-    await page.goto(BASE_URL);
+    await page.goto(`${BASE_URL}?testMode=true`);
+    await page.evaluate(() => {
+      window.isTestMode = true;
+    });
   });
 
   test('should display the intro screen with game title and instructions', async ({ page }) => {
