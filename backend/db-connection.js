@@ -1,11 +1,11 @@
 const { Pool } = require('pg');
 
-// Parse connection string manually to avoid IPv6 issues
+// Use IPv4-compatible pooler connection
 const pool = new Pool({
-  user: 'postgres',
-  password: process.env.DB_PASSWORD, // We'll set this separately
-  host: 'db.mlujgvsuldodbboncqec.supabase.co',
-  port: 5432,
+  user: 'postgres.mlujgvsuldodbboncqec',
+  password: process.env.DB_PASSWORD,
+  host: 'aws-1-us-east-2.pooler.supabase.com',
+  port: 6543,
   database: 'postgres',
   ssl: {
     rejectUnauthorized: false
@@ -13,9 +13,8 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
-// Test connection on startup
 pool.on('connect', () => {
-  console.log('✅ Connected to Supabase database');
+  console.log('✅ Connected to Supabase database via pooler');
 });
 
 pool.on('error', (err) => {
