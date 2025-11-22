@@ -3,6 +3,15 @@ const pool = require('../db-connection');
 
 const router = express.Router();
 
+// Helper function to normalize answer for comparison (strips punctuation, keeps only letters and spaces)
+function normalizeAnswer(answer) {
+  return answer
+    .toUpperCase()
+    .replace(/[^A-Z\s]/g, '') // Remove everything except letters and spaces
+    .replace(/\s+/g, ' ')     // Normalize multiple spaces to single space
+    .trim();
+}
+
 // Helper function to get today's date in Eastern Time
 function getTodayEastern() {
   const now = new Date();
@@ -107,7 +116,8 @@ router.post('/validate-clue', async (req, res) => {
       return res.status(404).json({ error: 'Clue not found' });
     }
 
-    const isCorrect = answer.toUpperCase().trim() === clue.answer.toUpperCase().trim();
+    // Normalize both answers for comparison (strips punctuation like apostrophes and hyphens)
+    const isCorrect = normalizeAnswer(answer) === normalizeAnswer(clue.answer);
     
     res.json({
       correct: isCorrect,
@@ -190,18 +200,54 @@ function generateWordSpecificHint(answer, linkingWord, wordIndex, hintType) {
     word === linkingWord && index > 0 && index < words.length - 1
   );
   
+  // Helper to generate letter array with punctuation pre-revealed
+  function generateLetterArray(word, revealType = 'empty') {
+    const letters = [];
+    let firstLetterRevealed = false;
+    
+    for (let i = 0; i < word.length; i++) {
+      const char = word[i];
+      const isLetter = /[A-Za-z]/.test(char);
+      
+      if (!isLetter) {
+        // Punctuation is always revealed
+        letters.push({ char: char, isPunctuation: true });
+      } else if (revealType === 'full_word') {
+        // Full reveal - show all letters
+        letters.push({ char: char.toUpperCase(), isPunctuation: false });
+      } else if (revealType === 'first_letter' && !firstLetterRevealed) {
+        // First letter reveal - show first actual letter
+        letters.push({ char: char.toUpperCase(), isPunctuation: false });
+        firstLetterRevealed = true;
+      } else {
+        // Blank
+        letters.push({ char: '_', isPunctuation: false });
+      }
+    }
+    
+    return letters;
+  }
+  
+  // Convert letter array to simple array of display characters
+  function toDisplayArray(letterArray) {
+    return letterArray.map(l => l.char);
+  }
+  
   // If no word_index specified, return initial structure
   if (wordIndex === undefined) {
     return {
       hint_type: 'structure',
-      word_structure: words.map((word, index) => ({
-        word_index: index,
-        length: word.length,
-        is_linking: index === linkIndex,
-        letters: new Array(word.length).fill('_'),
-        state: 'empty', // empty, first_letter, full_word
-        clickable: index !== linkIndex // Non-linking words are clickable initially
-      })),
+      word_structure: words.map((word, index) => {
+        const letterArray = generateLetterArray(word, 'empty');
+        return {
+          word_index: index,
+          length: word.length,
+          is_linking: index === linkIndex,
+          letters: toDisplayArray(letterArray),
+          state: 'empty', // empty, first_letter, full_word
+          clickable: index !== linkIndex // Non-linking words are clickable initially
+        };
+      }),
       penalty: 5
     };
   }
@@ -240,18 +286,17 @@ function generateWordSpecificHint(answer, linkingWord, wordIndex, hintType) {
     if (index === wordIndex) {
       // This is the word being hinted
       if (hintType === 'first_letter') {
-        letters = new Array(word.length).fill('_');
-        letters[0] = word[0];
+        letters = toDisplayArray(generateLetterArray(word, 'first_letter'));
         state = 'first_letter';
         clickable = true; // Can click again for full word
       } else if (hintType === 'full_word') {
-        letters = word.split('');
+        letters = toDisplayArray(generateLetterArray(word, 'full_word'));
         state = 'full_word';
         clickable = false; // No more hints available for this word
       }
     } else {
-      // Other words - return as blanks (frontend will maintain state)
-      letters = new Array(word.length).fill('_');
+      // Other words - return as blanks with punctuation revealed (frontend will maintain state)
+      letters = toDisplayArray(generateLetterArray(word, 'empty'));
       state = 'empty';
       clickable = index !== linkIndex; // Non-linking words are clickable
     }
@@ -389,7 +434,7 @@ router.post('/validate-all', async (req, res) => {
     const results = clues.map((clue, index) => {
       const userAnswer = answers[index];
       const isCorrect = userAnswer && 
-                       userAnswer.toUpperCase().trim() === clue.answer.toUpperCase().trim();
+                       normalizeAnswer(userAnswer) === normalizeAnswer(clue.answer);
       
       return {
         clue_number: clue.clue_number,
