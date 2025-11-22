@@ -103,7 +103,7 @@ function showError(message) {
             <p style="margin-top: 10px;">Make sure your backend server is running:</p>
             <code style="background: #fff; padding: 5px; border-radius: 3px; display: block; margin: 10px 0;">cd backend && npm run dev</code>
         </div>
-        <button class="start-btn" onclick="loadTodaysPuzzle()" style="background: #6c757d;">🔄 Retry Connection</button>
+        <button class="start-btn" onclick="loadTodaysPuzzle()" style="background: #6c757d;">ðŸ”„ Retry Connection</button>
     `;
 }
 
@@ -312,6 +312,7 @@ function initializeWordStates(wordStructure) {
     }
     
     // Initialize word states for current question
+    // Use the server's letters array which includes pre-revealed punctuation
     wordStates[currentQuestion] = wordStructure.map(wordData => {
         // Make sure non-linking words start as clickable
         const clickable = !wordData.is_linking;
@@ -321,7 +322,7 @@ function initializeWordStates(wordStructure) {
             length: wordData.length,
             is_linking: wordData.is_linking,
             state: 'empty',
-            letters: new Array(wordData.length).fill('_'),
+            letters: wordData.letters.slice(), // Use server's letters (includes punctuation)
             clickable: clickable  // Non-linking words should be clickable initially
         };
     });
@@ -427,6 +428,11 @@ function checkLinkingWordAvailability() {
 
 // ===== DISPLAY FUNCTIONS =====
 
+// Helper to check if a character is punctuation (not a letter or blank)
+function isPunctuation(char) {
+    return char !== '_' && !/[A-Za-z]/.test(char);
+}
+
 function renderInteractiveWordDisplay() {
     const display = document.getElementById('answerDisplay');
     const currentWordStates = getCurrentWordStates();
@@ -454,12 +460,15 @@ function renderInteractiveWordDisplay() {
                       style="cursor: ${wordData.clickable ? 'pointer' : 'default'}">`;
         
         wordData.letters.forEach((letter) => {
+            // Check if this is punctuation (apostrophe, hyphen, etc.)
+            const isPunct = isPunctuation(letter);
+            
             const letterClasses = [
-                'letter-box',
-                letter === '_' ? 'blank' : 'filled',
+                isPunct ? 'punctuation-mark' : 'letter-box',
+                !isPunct && letter === '_' ? 'blank' : 'filled',
                 wordData.is_linking ? 'linking-word' : '',
-                // If it's a re-render, immediately mark boxes as visible
-                !isFirstRender ? 'visible' : ''
+                // If it's a re-render or punctuation, immediately mark as visible
+                (!isFirstRender || isPunct) ? 'visible' : ''
             ].filter(Boolean).join(' ');
             
             html += `<div class="${letterClasses}">${letter === '_' ? '' : letter}</div>`;
@@ -533,10 +542,18 @@ function showCelebrationAnswer(fullAnswer, linkingWord) {
         html += `<div class="${groupClass}">`;
         
         for (let letterIndex = 0; letterIndex < word.length; letterIndex++) {
-            const letterClass = isLinking ? 'letter-box filled linking-word celebration-letter' : 'letter-box filled celebration-letter';
+            const char = word[letterIndex];
+            const isPunct = isPunctuation(char);
             // Calculate delay: word starts at wordIndex * 300ms, letters within word at 60ms intervals
             const animationDelay = (wordIndex * 300) + (letterIndex * 60);
-            html += `<div class="${letterClass}" style="animation-delay: ${animationDelay}ms">${word[letterIndex]}</div>`;
+            
+            if (isPunct) {
+                // Punctuation gets its own styling
+                html += `<div class="punctuation-mark filled celebration-letter" style="animation-delay: ${animationDelay}ms">${char}</div>`;
+            } else {
+                const letterClass = isLinking ? 'letter-box filled linking-word celebration-letter' : 'letter-box filled celebration-letter';
+                html += `<div class="${letterClass}" style="animation-delay: ${animationDelay}ms">${char}</div>`;
+            }
         }
         
         html += '</div>';
@@ -560,7 +577,14 @@ function showCompleteAnswer(answer, linkingWord) {
         html += `<div class="word-group${isLinking ? ' linking-word-group' : ''}">`;
         
         for (let i = 0; i < word.length; i++) {
-            html += `<div class="letter-box filled${isLinking ? ' linking-word' : ''}">${word[i]}</div>`;
+            const char = word[i];
+            const isPunct = isPunctuation(char);
+            
+            if (isPunct) {
+                html += `<div class="punctuation-mark filled">${char}</div>`;
+            } else {
+                html += `<div class="letter-box filled${isLinking ? ' linking-word' : ''}">${char}</div>`;
+            }
         }
         
         html += '</div>';
@@ -595,6 +619,9 @@ function animateLetterReveal(wordIndex, letterIndex) {
     const currentWordStates = getCurrentWordStates();
     const letter = currentWordStates[wordIndex].letters[letterIndex];
     
+    // Skip punctuation - it's already visible
+    if (isPunctuation(letter)) return;
+    
     // Simple reveal: just add the letter and trigger animation
     letterBox.textContent = letter;
     letterBox.classList.remove('blank');
@@ -610,13 +637,21 @@ function animateFullWordReveal(wordIndex, word) {
     const wordElement = document.querySelector(`[data-word-index="${wordIndex}"]`);
     if (!wordElement) return;
     
-    // Reveal each letter with a slight stagger
+    // Reveal each letter with a slight stagger (skip punctuation - already revealed)
+    let animationIndex = 0;
     for (let i = 0; i < word.length; i++) {
+        const char = word[i];
+        const letterBox = wordElement.children[i];
+        if (!letterBox) continue;
+        
+        // Skip punctuation - it's already visible
+        if (isPunctuation(char)) continue;
+        
+        const delay = animationIndex * 40; // 40ms stagger between letters
+        animationIndex++;
+        
         setTimeout(() => {
-            const letterBox = wordElement.children[i];
-            if (!letterBox) return;
-            
-            letterBox.textContent = word[i];
+            letterBox.textContent = char;
             letterBox.classList.remove('blank');
             letterBox.classList.add('filled', 'revealing');
             
@@ -624,7 +659,7 @@ function animateFullWordReveal(wordIndex, word) {
             setTimeout(() => {
                 letterBox.classList.remove('revealing');
             }, 400);
-        }, i * 40); // 40ms stagger between letters
+        }, delay);
     }
 }
 
@@ -676,7 +711,7 @@ function updateGuessHistoryDisplay() {
     
     // Build the list (newest first)
     historyList.innerHTML = currentGuesses
-        .map(guess => `<div class="guess-item">❌ ${guess}</div>`)
+        .map(guess => `<div class="guess-item">âŒ ${guess}</div>`)
         .join('');
 }
 
@@ -778,7 +813,7 @@ async function showResults() {
             dot.classList.add('heavy-struggle');
         }
         
-        dot.textContent = '✓';
+        dot.textContent = 'âœ“';
         dot.title = `Question ${i+1}: ${summary.hintsUsed} hints used (-${summary.totalPenalty} points)`;
         grid.appendChild(dot);
     }
@@ -830,7 +865,7 @@ async function submitResults(score, completionTime) {
         if (result.success) {
             console.log('Results submitted successfully:', result);
             if (result.isTest) {
-                console.log('🧪 Test mode: Result not saved to statistics');
+                console.log('ðŸ§ª Test mode: Result not saved to statistics');
             }
         }
     } catch (error) {
@@ -868,7 +903,7 @@ function shareResults() {
     const shareBtn = document.querySelector('.share-results-btn');
     const originalText = shareBtn.textContent;
     
-    shareBtn.textContent = "Coming Soon! 🎉";
+    shareBtn.textContent = "Coming Soon! ðŸŽ‰";
     shareBtn.disabled = true;
     shareBtn.style.background = '#6c757d';
     shareBtn.style.color = 'white';
