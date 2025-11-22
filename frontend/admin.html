@@ -438,8 +438,8 @@
                         </div>
 
                         <div class="form-group" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
-                            <label for="copyFromDate">📋 Copy from existing puzzle:</label>
-                            <input type="date" id="copyFromDate" style="margin-bottom: 8px;">
+                            <label for="copyFromDateInput">📋 Copy from existing puzzle:</label>
+                            <input type="date" id="copyFromDateInput" style="margin-bottom: 8px;">
                             <button type="button" class="btn btn-secondary" onclick="copyFromDate()" style="width: 100%;">Copy Clues</button>
                             <div id="copyStatus" style="font-size: 0.85rem; color: #666; margin-top: 5px;"></div>
                         </div>
@@ -973,7 +973,7 @@
         }
 
         function copyFromDate() {
-            const copyDate = document.getElementById('copyFromDate').value;
+            const copyDate = document.getElementById('copyFromDateInput').value;
             const copyStatus = document.getElementById('copyStatus');
             
             if (!copyDate) {
