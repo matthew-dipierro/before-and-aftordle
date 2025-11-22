@@ -103,7 +103,7 @@ function showError(message) {
             <p style="margin-top: 10px;">Make sure your backend server is running:</p>
             <code style="background: #fff; padding: 5px; border-radius: 3px; display: block; margin: 10px 0;">cd backend && npm run dev</code>
         </div>
-        <button class="start-btn" onclick="loadTodaysPuzzle()" style="background: #6c757d;">ðŸ”„ Retry Connection</button>
+        <button class="start-btn" onclick="loadTodaysPuzzle()" style="background: #6c757d;">[Refresh] Retry Connection</button>
     `;
 }
 
@@ -711,7 +711,7 @@ function updateGuessHistoryDisplay() {
     
     // Build the list (newest first)
     historyList.innerHTML = currentGuesses
-        .map(guess => `<div class="guess-item">âŒ ${guess}</div>`)
+        .map(guess => `<div class="guess-item">X ${guess}</div>`)
         .join('');
 }
 
@@ -813,7 +813,7 @@ async function showResults() {
             dot.classList.add('heavy-struggle');
         }
         
-        dot.textContent = 'âœ“';
+        dot.textContent = '\u2713';
         dot.title = `Question ${i+1}: ${summary.hintsUsed} hints used (-${summary.totalPenalty} points)`;
         grid.appendChild(dot);
     }
@@ -865,7 +865,7 @@ async function submitResults(score, completionTime) {
         if (result.success) {
             console.log('Results submitted successfully:', result);
             if (result.isTest) {
-                console.log('ðŸ§ª Test mode: Result not saved to statistics');
+                console.log('[Test] Test mode: Result not saved to statistics');
             }
         }
     } catch (error) {
@@ -903,7 +903,7 @@ function shareResults() {
     const shareBtn = document.querySelector('.share-results-btn');
     const originalText = shareBtn.textContent;
     
-    shareBtn.textContent = "Coming Soon! ðŸŽ‰";
+    shareBtn.textContent = "Coming Soon! ";
     shareBtn.disabled = true;
     shareBtn.style.background = '#6c757d';
     shareBtn.style.color = 'white';
