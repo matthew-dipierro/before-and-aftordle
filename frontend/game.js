@@ -170,7 +170,8 @@ function updateDisplay() {
 
 function showEmptyState() {
     const display = document.getElementById('answerDisplay');
-    display.innerHTML = '<div class="empty-message">Type your answer below, or use hints if needed</div>';
+    display.innerHTML = '';
+    display.style.display = 'none';
 }
 
 // ===== API CALLS =====
@@ -442,6 +443,9 @@ function renderInteractiveWordDisplay() {
         return;
     }
     
+    // Show the display box
+    display.style.display = 'flex';
+    
     // Check if this is the first render (structure reveal) or a re-render (after hint)
     const isFirstRender = !display.querySelector('.letter-box');
     
@@ -483,9 +487,10 @@ function renderInteractiveWordDisplay() {
     
     // Only animate boxes on first render (structure reveal)
     if (isFirstRender) {
+        // Small delay to ensure the display is painted before animation starts
         setTimeout(() => {
             animateBoxMaterialization();
-        }, 10);
+        }, 50);
     }
     
     // Debug logging
@@ -528,6 +533,8 @@ function revealCompleteAnswer(fullAnswer) {
 
 function showCelebrationAnswer(fullAnswer, linkingWord) {
     const display = document.getElementById('answerDisplay');
+    display.style.display = 'flex';
+    
     const words = fullAnswer.split(' ');
     const linkIndex = words.findIndex((word, index) => 
       word === linkingWord && index > 0 && index < words.length - 1
@@ -565,6 +572,8 @@ function showCelebrationAnswer(fullAnswer, linkingWord) {
 
 function showCompleteAnswer(answer, linkingWord) {
     const display = document.getElementById('answerDisplay');
+    display.style.display = 'flex';
+    
     const words = answer.split(' ');
     const linkIndex = words.findIndex((word, index) => 
       word === linkingWord && index > 0 && index < words.length - 1
@@ -675,7 +684,7 @@ function updateHintButton() {
         hintBtn.style.color = 'var(--text-secondary)';
     } else {
         hintBtn.disabled = false;
-        hintBtn.textContent = 'Show Word Structure';
+        hintBtn.textContent = 'Hint - Show Word Structure';
         hintBtn.style.background = 'var(--primary-blue)';
         hintBtn.style.color = 'white';
     }
