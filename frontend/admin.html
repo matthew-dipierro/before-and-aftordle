@@ -365,7 +365,7 @@
     <!-- Login Screen -->
     <div id="loginScreen" class="login-screen">
         <div class="login-form">
-            <h1>ðŸŽ® Admin Login</h1>
+            <h1>🎮 Admin Login</h1>
             <div id="loginError" class="error-message" style="display: none;"></div>
             <div class="form-group">
                 <label for="username">Username:</label>
@@ -383,7 +383,7 @@
     <div id="adminDashboard" class="admin-container" style="display: none;">
         <div class="header">
             <div class="header-top">
-                <h1 class="title">ðŸŽ® Phrasey Chain Admin</h1>
+                <h1 class="title">🎮 Phrasey Chain Admin</h1>
                 <button class="logout-btn" onclick="logout()">Logout</button>
             </div>
             <div class="stats-grid">
@@ -408,7 +408,7 @@
 
         <!-- Create Puzzle Panel -->
         <div class="panel">
-            <h2>âž• Create/Edit Daily Puzzle (5 Clues)</h2>
+            <h2>➕ Create/Edit Daily Puzzle (5 Clues)</h2>
             <div id="puzzleFormError" class="error-message" style="display: none;"></div>
             <div id="puzzleFormSuccess" class="success-message" style="display: none;"></div>
             
@@ -418,12 +418,12 @@
                 <div class="puzzle-form-grid">
                     <div class="date-difficulty-section">
                         <div class="form-group">
-                            <label for="puzzleDate">ðŸ“… Date:</label>
+                            <label for="puzzleDate">📅 Date:</label>
                             <input type="date" id="puzzleDate" required>
                         </div>
                         
                         <div class="form-group">
-                            <label for="puzzleDifficulty">â­ Difficulty (1-5):</label>
+                            <label for="puzzleDifficulty">⭐ Difficulty (1-5):</label>
                             <input type="number" id="puzzleDifficulty" min="1" max="5" value="1">
                         </div>
 
@@ -514,14 +514,14 @@
 
         <!-- Puzzle Management Panel -->
         <div class="panel">
-            <h2>ðŸ—‚ Manage Daily Puzzles</h2>
+            <h2>🗂 Manage Daily Puzzles</h2>
             
             <div class="quick-actions">
-                <input type="text" id="searchPuzzles" placeholder="ðŸ” Search puzzles..." style="width: 300px;" oninput="filterPuzzles()">
-                <button class="btn btn-secondary btn-small" onclick="loadPuzzles()">ðŸ”„ Refresh</button>
-                <button class="btn btn-secondary btn-small" onclick="exportPuzzles()">ðŸ“¤ Export</button>
+                <input type="text" id="searchPuzzles" placeholder="🔍 Search puzzles..." style="width: 300px;" oninput="filterPuzzles()">
+                <button class="btn btn-secondary btn-small" onclick="loadPuzzles()">🔄 Refresh</button>
+                <button class="btn btn-secondary btn-small" onclick="exportPuzzles()">📤 Export</button>
                 <input type="file" id="importFile" accept=".json" onchange="importPuzzles()" style="display: none;">
-                <button class="btn btn-secondary btn-small" onclick="document.getElementById('importFile').click()">ðŸ“¥ Import</button>
+                <button class="btn btn-secondary btn-small" onclick="document.getElementById('importFile').click()">📥 Import</button>
             </div>
             
             <div id="puzzleList" class="puzzle-list">
@@ -602,10 +602,10 @@
         function updateConnectionStatus(isOnline) {
             const status = document.getElementById('connectionStatus');
             if (isOnline) {
-                status.textContent = 'ðŸŸ¢ Server Online';
+                status.textContent = '🟢 Server Online';
                 status.className = 'connection-status connection-online';
             } else {
-                status.textContent = 'ðŸ”´ Server Offline';
+                status.textContent = '🔴 Server Offline';
                 status.className = 'connection-status connection-offline';
             }
         }
@@ -684,7 +684,7 @@
                 const stats = await apiRequest('/admin/dashboard');
                 document.getElementById('totalPuzzles').textContent = stats.total_puzzles || 0;
                 document.getElementById('futurePuzzles').textContent = stats.future_puzzles || 0;
-                document.getElementById('todayPuzzle').textContent = stats.today_puzzle ? 'âœ…' : 'âŒ';
+                document.getElementById('todayPuzzle').textContent = stats.today_puzzle ? '✅' : '❌';
                 document.getElementById('todayPlays').textContent = stats.today_plays || 0;
             } catch (error) {
                 console.error('Failed to load dashboard stats:', error);
@@ -697,7 +697,7 @@
                 allPuzzles = puzzles;
                 renderPuzzleList(puzzles);
             } catch (error) {
-                document.getElementById('puzzleList').innerHTML = '<div style="text-align: center; padding: 20px; color: red;">âŒ Failed to load puzzles</div>';
+                document.getElementById('puzzleList').innerHTML = '<div style="text-align: center; padding: 20px; color: red;">❌ Failed to load puzzles</div>';
             }
         }
 
@@ -705,7 +705,7 @@
             const puzzleList = document.getElementById('puzzleList');
             
             if (puzzles.length === 0) {
-                puzzleList.innerHTML = '<div style="text-align: center; padding: 20px;">ðŸ”­ No daily puzzles found</div>';
+                puzzleList.innerHTML = '<div style="text-align: center; padding: 20px;">📭 No daily puzzles found</div>';
                 return;
             }
 
@@ -719,18 +719,18 @@
                 const isToday = puzzleDateString === todayString;
                 const isPast = puzzleDateString < todayString;
                 
-                let statusIcon = 'ðŸ“…';
+                let statusIcon = '📅';
                 let statusText = 'Future';
                 if (isToday) {
-                    statusIcon = 'ðŸŽ¯';
+                    statusIcon = '🎯';
                     statusText = 'Today';
                 } else if (isPast) {
-                    statusIcon = 'ðŸ“š';
+                    statusIcon = '📚';
                     statusText = 'Past';
                 }
 
                 if (!puzzle.is_active) {
-                    statusIcon = 'ðŸš«';
+                    statusIcon = '🚫';
                     statusText = 'Inactive';
                 }
                 
@@ -739,25 +739,25 @@
                         <div class="puzzle-header">
                             <div class="puzzle-date">
                                 ${statusIcon} ${displayDate.toLocaleDateString()} (${statusText})
-                                ${puzzle.difficulty > 1 ? 'â­'.repeat(puzzle.difficulty) : ''}
+                                ${puzzle.difficulty > 1 ? '⭐'.repeat(puzzle.difficulty) : ''}
                             </div>
                             <div class="puzzle-actions">
-                                <button class="btn btn-secondary btn-small" onclick="editPuzzle(${puzzle.id})">âœï¸ Edit</button>
-                                <button class="btn btn-danger btn-small" onclick="deletePuzzle(${puzzle.id})">ðŸ—‘ï¸ Delete</button>
+                                <button class="btn btn-secondary btn-small" onclick="editPuzzle(${puzzle.id})">✏️ Edit</button>
+                                <button class="btn btn-danger btn-small" onclick="deletePuzzle(${puzzle.id})">🗑️ Delete</button>
                             </div>
                         </div>
                         <div class="clues-preview">
                             ${puzzle.clues.map((clue, index) => `
                                 <div class="clue-preview-item">
                                     <div class="clue-preview-text">${index + 1}. "${clue.clue}"</div>
-                                    <div class="clue-preview-answer">â†’ ${clue.answer} (${clue.linking_word})</div>
+                                    <div class="clue-preview-answer">→ ${clue.answer} (${clue.linking_word})</div>
                                 </div>
                             `).join('')}
                         </div>
                         <div style="font-size: 0.8rem; color: #888; margin-top: 10px;">
-                            ðŸ“Š Plays: ${puzzle.completion_count || 0} | 
-                            ðŸ“ˆ Avg Score: ${puzzle.avg_score ? puzzle.avg_score.toFixed(1) : 'N/A'} |
-                            ðŸ‘¤ Created by: ${puzzle.created_by_username || 'Admin'}
+                            📊 Plays: ${puzzle.completion_count || 0} | 
+                            📈 Avg Score: ${puzzle.avg_score ? puzzle.avg_score.toFixed(1) : 'N/A'} |
+                            👤 Created by: ${puzzle.created_by_username || 'Admin'}
                         </div>
                     </div>
                 `;
@@ -774,7 +774,7 @@
             validationElement.textContent = '';
 
             if (answer && linking && !answer.includes(linking)) {
-                validationElement.textContent = 'âŒ Linking word must be in the answer';
+                validationElement.textContent = '❌ Linking word must be in the answer';
                 return false;
             }
 
@@ -786,7 +786,7 @@
                 );
 
                 if (forbiddenWords.length > 0) {
-                    validationElement.textContent = `âŒ Clue cannot contain: ${forbiddenWords.join(', ')}`;
+                    validationElement.textContent = `❌ Clue cannot contain: ${forbiddenWords.join(', ')}`;
                     return false;
                 }
             }
@@ -803,9 +803,9 @@
             }
             
             if (allValid) {
-                showMessage('puzzleFormSuccess', 'âœ… All clues are valid!', 'success');
+                showMessage('puzzleFormSuccess', '✅ All clues are valid!', 'success');
             } else {
-                showMessage('puzzleFormError', 'âŒ Please fix validation errors', 'error');
+                showMessage('puzzleFormError', '❌ Please fix validation errors', 'error');
             }
         }
 
@@ -837,7 +837,7 @@
             }
 
             if (!validationPassed) {
-                showMessage('puzzleFormError', 'âŒ Please fix validation errors before saving', 'error');
+                showMessage('puzzleFormError', '❌ Please fix validation errors before saving', 'error');
                 return;
             }
 
@@ -849,13 +849,13 @@
                         method: 'PUT',
                         body: JSON.stringify(puzzleData)
                     });
-                    showMessage('puzzleFormSuccess', 'âœ… Daily puzzle updated successfully!', 'success');
+                    showMessage('puzzleFormSuccess', '✅ Daily puzzle updated successfully!', 'success');
                 } else {
                     await apiRequest('/admin/daily-puzzles', {
                         method: 'POST',
                         body: JSON.stringify(puzzleData)
                     });
-                    showMessage('puzzleFormSuccess', 'âœ… Daily puzzle created successfully!', 'success');
+                    showMessage('puzzleFormSuccess', '✅ Daily puzzle created successfully!', 'success');
                 }
                 
                 clearForm();
@@ -863,7 +863,7 @@
                 loadDashboardStats();
                 
             } catch (error) {
-                showMessage('puzzleFormError', 'âŒ ' + error.message, 'error');
+                showMessage('puzzleFormError', '❌ ' + error.message, 'error');
             }
         }
 
@@ -886,7 +886,7 @@
             document.getElementById('submitBtn').textContent = 'Update Daily Puzzle';
             
             document.querySelector('.panel').scrollIntoView({ behavior: 'smooth' });
-            showMessage('puzzleFormSuccess', 'ðŸ“ Editing daily puzzle - make changes and click Update', 'success');
+            showMessage('puzzleFormSuccess', '📝 Editing daily puzzle - make changes and click Update', 'success');
         }
 
         async function deletePuzzle(id) {
@@ -899,9 +899,9 @@
                 await apiRequest(`/admin/daily-puzzles/${id}`, { method: 'DELETE' });
                 loadPuzzles();
                 loadDashboardStats();
-                showMessage('puzzleFormSuccess', 'âœ… Daily puzzle deleted successfully', 'success');
+                showMessage('puzzleFormSuccess', '✅ Daily puzzle deleted successfully', 'success');
             } catch (error) {
-                showMessage('puzzleFormError', 'âŒ Failed to delete: ' + error.message, 'error');
+                showMessage('puzzleFormError', '❌ Failed to delete: ' + error.message, 'error');
             }
         }
 
@@ -969,7 +969,7 @@
                 document.getElementById(`linking${num}`).value = sample.linking;
             });
 
-            showMessage('puzzleFormSuccess', 'âœ¨ Sample daily puzzle generated!', 'success');
+            showMessage('puzzleFormSuccess', '✨ Sample daily puzzle generated!', 'success');
         }
 
         function copyFromDate() {
@@ -1024,7 +1024,7 @@
             a.click();
             URL.revokeObjectURL(url);
             
-            showMessage('puzzleFormSuccess', `ðŸ“¦ Exported ${exportData.length} daily puzzles`, 'success');
+            showMessage('puzzleFormSuccess', `📦 Exported ${exportData.length} daily puzzles`, 'success');
         }
 
         function importPuzzles() {
