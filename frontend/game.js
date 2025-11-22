@@ -711,7 +711,7 @@ function updateGuessHistoryDisplay() {
     
     // Build the list (newest first)
     historyList.innerHTML = currentGuesses
-        .map(guess => `<div class="guess-item">X ${guess}</div>`)
+        .map(guess => `<div class="guess-item">\u274C ${guess}</div>`)
         .join('');
 }
 
