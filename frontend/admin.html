@@ -436,6 +436,13 @@
                             <button type="button" class="btn btn-secondary" onclick="generateSamplePuzzle()">Generate Sample</button>
                             <button type="button" class="btn btn-secondary" onclick="validateAllClues()">Validate All</button>
                         </div>
+
+                        <div class="form-group" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
+                            <label for="copyFromDate">📋 Copy from existing puzzle:</label>
+                            <input type="date" id="copyFromDate" style="margin-bottom: 8px;">
+                            <button type="button" class="btn btn-secondary" onclick="copyFromDate()" style="width: 100%;">Copy Clues</button>
+                            <div id="copyStatus" style="font-size: 0.85rem; color: #666; margin-top: 5px;"></div>
+                        </div>
                     </div>
 
                     <div class="clues-section">
@@ -529,23 +536,13 @@
                           window.location.protocol === 'file:' ||
                           window.location.hostname === '127.0.0.1')
             ? 'http://localhost:3001/api'  // Local development
-            : 'https://before-and-aftordle.onrender.com/api';  // Production (Netlify -> Render)
+            : '/api';  // Production
         
         console.log('Current hostname:', window.location.hostname);
         console.log('Using API_BASE:', API_BASE);
         let authToken = null;
         let allPuzzles = [];
 
-        // Helper function to get today's date in Eastern Time
-        function getTodayEastern() {
-            const now = new Date();
-            const easternDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-            const year = easternDate.getFullYear();
-            const month = String(easternDate.getMonth() + 1).padStart(2, '0');
-            const day = String(easternDate.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-        
         // Format date to local date string (YYYY-MM-DD)
         function formatLocalDate(date) {
             const year = date.getFullYear();
@@ -708,19 +705,19 @@
             const puzzleList = document.getElementById('puzzleList');
             
             if (puzzles.length === 0) {
-                puzzleList.innerHTML = '<div style="text-align: center; padding: 20px;">🔭 No daily puzzles found</div>';
+                puzzleList.innerHTML = '<div style="text-align: center; padding: 20px;">📭 No daily puzzles found</div>';
                 return;
             }
 
             puzzleList.innerHTML = puzzles.map(puzzle => {
                 const displayDate = parseDisplayDate(puzzle.date);
                 
-                // Get today's date in Eastern Time
-                const todayEastern = getTodayEastern();
+                // Handle PostgreSQL date format (YYYY-MM-DD vs local date) - FIXED
+                const todayString = new Date().toISOString().split('T')[0];
                 const puzzleDateString = puzzle.date.split('T')[0]; // Handle both formats
                 
-                const isToday = puzzleDateString === todayEastern;
-                const isPast = puzzleDateString < todayEastern;
+                const isToday = puzzleDateString === todayString;
+                const isPast = puzzleDateString < todayString;
                 
                 let statusIcon = '📅';
                 let statusText = 'Future';
@@ -973,6 +970,38 @@
             });
 
             showMessage('puzzleFormSuccess', '✨ Sample daily puzzle generated!', 'success');
+        }
+
+        function copyFromDate() {
+            const copyDate = document.getElementById('copyFromDate').value;
+            const copyStatus = document.getElementById('copyStatus');
+            
+            if (!copyDate) {
+                copyStatus.innerHTML = '<span style="color: #dc3545;">Please select a date first</span>';
+                return;
+            }
+            
+            // Find puzzle with matching date in our loaded puzzles
+            const sourcePuzzle = allPuzzles.find(p => p.date.split('T')[0] === copyDate);
+            
+            if (!sourcePuzzle) {
+                copyStatus.innerHTML = '<span style="color: #dc3545;">No puzzle found for ' + copyDate + '</span>';
+                return;
+            }
+            
+            // Copy the clues (but NOT the date - keep the target date)
+            sourcePuzzle.clues.forEach((clue, index) => {
+                const clueNum = index + 1;
+                document.getElementById(`clue${clueNum}`).value = clue.clue;
+                document.getElementById(`answer${clueNum}`).value = clue.answer;
+                document.getElementById(`linking${clueNum}`).value = clue.linking_word;
+            });
+            
+            // Copy difficulty too
+            document.getElementById('puzzleDifficulty').value = sourcePuzzle.difficulty || 1;
+            
+            copyStatus.innerHTML = '<span style="color: #155724;">✓ Copied clues from ' + copyDate + '</span>';
+            showMessage('puzzleFormSuccess', '📋 Clues copied! Adjust the date and save as new puzzle.', 'success');
         }
 
         function exportPuzzles() {
