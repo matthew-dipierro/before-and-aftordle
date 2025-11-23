@@ -247,13 +247,53 @@ body {
 .answer-display {
     margin: var(--space-lg) 0;
     text-align: center;
-    min-height: 80px;
+    min-height: 60px;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: var(--space-lg);
+    padding: 20px 24px;
     background: var(--bg-secondary);
     border-radius: var(--radius-medium);
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+/* Clickable hint button state */
+.answer-display-clickable {
+    cursor: pointer;
+    min-height: 60px;
+}
+
+.answer-display-clickable:hover {
+    background: #E8F4FF;
+    border-color: var(--primary-blue);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
+}
+
+.answer-display-clickable:active {
+    transform: translateY(0);
+}
+
+.hint-prompt {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.answer-display-clickable:hover .hint-prompt {
+    color: var(--primary-blue);
+}
+
+.word-instruction {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    font-weight: 400;
+    transition: all 0.3s ease;
 }
 
 .empty-message {
@@ -514,6 +554,46 @@ body {
     box-shadow: 0 0 0 3px var(--primary-blue-secondary);
 }
 
+.submit-section {
+    text-align: center;
+    margin: var(--space-lg) 0;
+}
+
+.submit-btn {
+    background: var(--primary-blue);
+    color: white;
+    border: none;
+    padding: 12px 32px;
+    border-radius: var(--radius-small);
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.2);
+    width: 100%;
+    max-width: 200px;
+}
+
+.submit-btn:hover:not(:disabled) {
+    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.submit-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.submit-btn:disabled,
+.submit-btn.disabled {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Old hint button styles - kept for backwards compatibility if needed */
 .hint-section {
     text-align: center;
     margin: var(--space-lg) 0;
