@@ -172,7 +172,7 @@ function updateDisplay() {
         // Show as hint button
         display.classList.add('answer-display-clickable');
         display.onclick = giveHint;
-        display.innerHTML = '<div class="hint-prompt">💡 Tap here for hint — Show word structure (-5 points)</div>';
+        display.innerHTML = '<div class="hint-prompt">ðŸ’¡ Tap here for hint â€” Show word structure (-5 points)</div>';
     }
 }
 
@@ -180,7 +180,7 @@ function showEmptyState() {
     const display = document.getElementById('answerDisplay');
     display.classList.add('answer-display-clickable');
     display.onclick = giveHint;
-    display.innerHTML = '<div class="hint-prompt">💡 Tap here for hint — Show word structure (-5 points)</div>';
+    display.innerHTML = '<div class="hint-prompt">ðŸ’¡ Tap here for hint â€” Show word structure (-5 points)</div>';
 }
 
 // ===== API CALLS =====
@@ -948,20 +948,75 @@ function updateStats(score) {
     document.getElementById('bestScore').textContent = `${stats.bestScore}/100`;
 }
 
-function shareResults() {
+async function shareResults() {
     const shareBtn = document.querySelector('.share-results-btn');
     const originalText = shareBtn.textContent;
     
-    shareBtn.textContent = "Coming Soon! ";
-    shareBtn.disabled = true;
-    shareBtn.style.background = '#6c757d';
-    shareBtn.style.color = 'white';
+    // Generate emoji grid based on performance
+    const emojiGrid = [];
+    for (let i = 0; i < puzzleClues.length; i++) {
+        const originalQuestion = currentQuestion;
+        currentQuestion = i;
+        const summary = getQuestionHintSummary();
+        currentQuestion = originalQuestion;
+        
+        // Map hint counts to emojis matching the dot colors
+        let emoji;
+        if (summary.hintsUsed === 0) {
+            emoji = '🟢'; // perfect (green)
+        } else if (summary.hintsUsed <= 2) {
+            emoji = '🟡'; // good (yellow)
+        } else if (summary.hintsUsed <= 5) {
+            emoji = '🟠'; // struggled (orange)
+        } else {
+            emoji = '🔴'; // heavy struggle (red)
+        }
+        emojiGrid.push(emoji);
+    }
     
-    setTimeout(() => {
-        shareBtn.textContent = originalText;
-        shareBtn.disabled = false;
-        shareBtn.style.background = '#007AFF';
-    }, 2000);
+    // Get puzzle number and score
+    const puzzleNumber = getPuzzleNumber(todaysPuzzle.date);
+    const totalPenalties = parseInt(document.getElementById('totalPenalties').textContent);
+    const finalScore = Math.max(0, 100 - totalPenalties);
+    
+    // Build share text
+    const shareText = `Phrasey Chain No. ${puzzleNumber} | ${finalScore}/100\n${emojiGrid.join('')}`;
+    
+    try {
+        // Try native share API (mobile)
+        if (navigator.share) {
+            await navigator.share({
+                text: shareText
+            });
+            // Success - no need for button feedback since share dialog appeared
+        } else {
+            // Fallback to clipboard (desktop)
+            await navigator.clipboard.writeText(shareText);
+            
+            // Show success feedback
+            shareBtn.textContent = '✓ Copied to Clipboard!';
+            shareBtn.style.background = '#34C759'; // green
+            
+            setTimeout(() => {
+                shareBtn.textContent = originalText;
+                shareBtn.style.background = '#007AFF';
+            }, 2000);
+        }
+    } catch (error) {
+        // User cancelled or error occurred
+        console.log('Share cancelled or failed:', error);
+        
+        // Only show error feedback if it wasn't just a cancellation
+        if (error.name !== 'AbortError') {
+            shareBtn.textContent = 'Share failed';
+            shareBtn.style.background = '#FF3B30'; // red
+            
+            setTimeout(() => {
+                shareBtn.textContent = originalText;
+                shareBtn.style.background = '#007AFF';
+            }, 2000);
+        }
+    }
 }
 
 // ===== EVENT LISTENERS =====
