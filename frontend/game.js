@@ -155,23 +155,32 @@ function loadQuestion() {
     
     updateProgress();
     updateDisplay();
-    updateHintButton();
+    updateSubmitButton();
     // Hide guess history for new question
     document.getElementById('guessHistory').style.display = 'none';
 }
 
 function updateDisplay() {
+    const display = document.getElementById('answerDisplay');
+    
     if (isStructureRevealed()) {
+        // Remove hint prompt and clickable state
+        display.classList.remove('answer-display-clickable');
+        display.onclick = null;
         renderInteractiveWordDisplay();
     } else {
-        showEmptyState();
+        // Show as hint button
+        display.classList.add('answer-display-clickable');
+        display.onclick = giveHint;
+        display.innerHTML = '<div class="hint-prompt">💡 Tap here for hint — Show word structure (-5 points)</div>';
     }
 }
 
 function showEmptyState() {
     const display = document.getElementById('answerDisplay');
-    display.innerHTML = '';
-    display.style.display = 'none';
+    display.classList.add('answer-display-clickable');
+    display.onclick = giveHint;
+    display.innerHTML = '<div class="hint-prompt">💡 Tap here for hint — Show word structure (-5 points)</div>';
 }
 
 // ===== API CALLS =====
@@ -289,6 +298,9 @@ async function checkAnswer() {
 // ===== HINT SYSTEM =====
 
 async function giveHint() {
+    // Prevent clicking if structure already revealed
+    if (isStructureRevealed()) return;
+    
     console.log('Getting structure hint...');
     const hintData = await getStructureHint();
     if (!hintData) return;
@@ -300,7 +312,6 @@ async function giveHint() {
     
     showFeedback(`Word structure revealed (-${hintData.penalty} points)`, 'incorrect');
     initializeWordStates(hintData.word_structure);
-    updateHintButton();
 }
 
 function initializeWordStates(wordStructure) {
@@ -331,6 +342,11 @@ function initializeWordStates(wordStructure) {
     structureRevealed[currentQuestion] = true;
     
     console.log('Final word states:', wordStates[currentQuestion]);
+    
+    // Remove clickable state from answer display
+    const display = document.getElementById('answerDisplay');
+    display.classList.remove('answer-display-clickable');
+    display.onclick = null;
     
     renderInteractiveWordDisplay();
 }
@@ -443,9 +459,6 @@ function renderInteractiveWordDisplay() {
         return;
     }
     
-    // Show the display box
-    display.style.display = 'flex';
-    
     // Check if this is the first render (structure reveal) or a re-render (after hint)
     const isFirstRender = !display.querySelector('.letter-box');
     
@@ -482,6 +495,9 @@ function renderInteractiveWordDisplay() {
     });
     
     html += '</div>';
+    
+    // Add instruction text that will show feedback temporarily
+    html += '<div class="word-instruction" id="wordInstruction">Tap words to reveal letters</div>';
     
     display.innerHTML = html;
     
@@ -533,8 +549,6 @@ function revealCompleteAnswer(fullAnswer) {
 
 function showCelebrationAnswer(fullAnswer, linkingWord) {
     const display = document.getElementById('answerDisplay');
-    display.style.display = 'flex';
-    
     const words = fullAnswer.split(' ');
     const linkIndex = words.findIndex((word, index) => 
       word === linkingWord && index > 0 && index < words.length - 1
@@ -572,8 +586,6 @@ function showCelebrationAnswer(fullAnswer, linkingWord) {
 
 function showCompleteAnswer(answer, linkingWord) {
     const display = document.getElementById('answerDisplay');
-    display.style.display = 'flex';
-    
     const words = answer.split(' ');
     const linkIndex = words.findIndex((word, index) => 
       word === linkingWord && index > 0 && index < words.length - 1
@@ -674,19 +686,17 @@ function animateFullWordReveal(wordIndex, word) {
 
 // ===== UI HELPERS =====
 
-function updateHintButton() {
-    const hintBtn = document.getElementById('hintBtn');
+function updateSubmitButton() {
+    const submitBtn = document.getElementById('submitBtn');
+    const answerInput = document.getElementById('answerInput');
     
-    if (isStructureRevealed()) {
-        hintBtn.disabled = true;
-        hintBtn.textContent = 'Tap words above to reveal letters';
-        hintBtn.style.background = 'var(--bg-tertiary)';
-        hintBtn.style.color = 'var(--text-secondary)';
+    // Enable/disable based on whether there's text in the input
+    if (answerInput.value.trim()) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('disabled');
     } else {
-        hintBtn.disabled = false;
-        hintBtn.textContent = 'Hint - Show Word Structure';
-        hintBtn.style.background = 'var(--primary-blue)';
-        hintBtn.style.color = 'white';
+        submitBtn.disabled = true;
+        submitBtn.classList.add('disabled');
     }
 }
 
@@ -703,6 +713,25 @@ function showFeedback(message, type) {
             feedback.style.display = 'none';
         }
     }, duration);
+    
+    // Also update word instruction if it exists (for word hint feedback)
+    const wordInstruction = document.getElementById('wordInstruction');
+    if (wordInstruction && type === 'incorrect' && 
+        (message.includes('revealed') || message.includes('Complete other words'))) {
+        // Temporarily show feedback in the instruction area
+        const originalText = 'Tap words to reveal letters';
+        wordInstruction.textContent = message;
+        wordInstruction.style.color = '#FF3B30';
+        wordInstruction.style.fontWeight = '500';
+        
+        setTimeout(() => {
+            if (wordInstruction) {
+                wordInstruction.textContent = originalText;
+                wordInstruction.style.color = '#86868B';
+                wordInstruction.style.fontWeight = '400';
+            }
+        }, duration);
+    }
 }
 
 function updateGuessHistoryDisplay() {
@@ -930,6 +959,10 @@ document.getElementById('answerInput').addEventListener('keypress', function(e) 
     if (e.key === 'Enter') {
         checkAnswer();
     }
+});
+
+document.getElementById('answerInput').addEventListener('input', function() {
+    updateSubmitButton();
 });
 
 // ===== INITIALIZATION =====
