@@ -982,7 +982,7 @@ async function shareResults() {
     const finalScore = Math.max(0, 100 - totalPenalties);
     
     // Build share text
-    const shareText = `Phrasey Chain No. ${puzzleNumber} | ${finalScore}/100\n${emojiGrid.join('')}`;
+    const shareText = `Phrasey Chain No. ${puzzleNumber} | ${finalScore}/100\n${emojiGrid.join('')}\nhttps://phraseychain.netlify.app`;
     
     try {
         // Try native share API (mobile)
