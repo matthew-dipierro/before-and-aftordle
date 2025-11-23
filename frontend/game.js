@@ -702,33 +702,43 @@ function updateSubmitButton() {
 
 function showFeedback(message, type) {
     const feedback = document.getElementById('feedback');
-    feedback.classList.remove('correct', 'incorrect');
-    feedback.textContent = message;
-    feedback.classList.add(type);
-    feedback.style.display = 'block';
-    
-    const duration = type === 'correct' ? 3000 : 4000;
-    setTimeout(() => {
-        if (feedback.textContent === message) {
-            feedback.style.display = 'none';
-        }
-    }, duration);
-    
-    // Also update word instruction if it exists (for word hint feedback)
     const wordInstruction = document.getElementById('wordInstruction');
-    if (wordInstruction && type === 'incorrect' && 
-        (message.includes('revealed') || message.includes('Complete other words'))) {
-        // Temporarily show feedback in the instruction area
-        const originalText = 'Tap words to reveal letters';
-        wordInstruction.textContent = message;
-        wordInstruction.style.color = '#FF3B30';
-        wordInstruction.style.fontWeight = '500';
+    
+    // Check if this is a word hint feedback message (should only show in instruction area)
+    const isWordHintFeedback = message.includes('revealed') || 
+                               message.includes('Complete other words') || 
+                               message.includes('linking word may now');
+    
+    if (isWordHintFeedback) {
+        // Only show in instruction area, hide main feedback
+        feedback.style.display = 'none';
         
+        if (wordInstruction) {
+            const originalText = 'Tap words to reveal letters';
+            wordInstruction.textContent = message;
+            wordInstruction.style.color = type === 'correct' ? '#34C759' : '#FF3B30';
+            wordInstruction.style.fontWeight = '500';
+            
+            const duration = 4000;
+            setTimeout(() => {
+                if (wordInstruction) {
+                    wordInstruction.textContent = originalText;
+                    wordInstruction.style.color = '#86868B';
+                    wordInstruction.style.fontWeight = '400';
+                }
+            }, duration);
+        }
+    } else {
+        // Show in main feedback area for other messages
+        feedback.classList.remove('correct', 'incorrect');
+        feedback.textContent = message;
+        feedback.classList.add(type);
+        feedback.style.display = 'block';
+        
+        const duration = type === 'correct' ? 3000 : 4000;
         setTimeout(() => {
-            if (wordInstruction) {
-                wordInstruction.textContent = originalText;
-                wordInstruction.style.color = '#86868B';
-                wordInstruction.style.fontWeight = '400';
+            if (feedback.textContent === message) {
+                feedback.style.display = 'none';
             }
         }, duration);
     }
