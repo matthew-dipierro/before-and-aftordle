@@ -172,7 +172,7 @@ function updateDisplay() {
         // Show as hint button
         display.classList.add('answer-display-clickable');
         display.onclick = giveHint;
-        display.innerHTML = '<div class="hint-prompt">ðŸ’¡ Tap here for hint â€” Show word structure (-5 points)</div>';
+        display.innerHTML = '<div class="hint-prompt">💡 Tap here for hint — Show word structure (-5 points)</div>';
     }
 }
 
@@ -180,7 +180,7 @@ function showEmptyState() {
     const display = document.getElementById('answerDisplay');
     display.classList.add('answer-display-clickable');
     display.onclick = giveHint;
-    display.innerHTML = '<div class="hint-prompt">ðŸ’¡ Tap here for hint â€” Show word structure (-5 points)</div>';
+    display.innerHTML = '<div class="hint-prompt">💡 Tap here for hint — Show word structure (-5 points)</div>';
 }
 
 // ===== API CALLS =====
