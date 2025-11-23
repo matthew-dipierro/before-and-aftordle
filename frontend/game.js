@@ -439,7 +439,8 @@ function checkLinkingWordAvailability() {
     currentWordStates[linkingWordIndex].clickable = allNonLinkingRevealed;
     
     if (allNonLinkingRevealed && !wasClickable && currentWordStates[linkingWordIndex].state !== 'full_word') {
-        setTimeout(() => showFeedback('The linking word may now be revealed', 'correct'), 500);
+        // Wait exactly 4000ms to transition smoothly from "Fully revealed" message
+        setTimeout(() => showFeedback('The linking word may now be revealed', 'correct'), 4000);
     }
 }
 
