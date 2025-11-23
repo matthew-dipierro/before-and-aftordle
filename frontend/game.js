@@ -309,6 +309,7 @@ async function giveHint() {
     
     hintPenalties += hintData.penalty;
     totalHintsUsed++;
+    questionHints[currentQuestion]++;  // Track hint for this question
     
     showFeedback(`Word structure revealed (-${hintData.penalty} points)`, 'incorrect');
     initializeWordStates(hintData.word_structure);
@@ -391,6 +392,7 @@ async function handleWordClick(wordIndex) {
     
     hintPenalties += hintData.penalty;
     totalHintsUsed++;
+    questionHints[currentQuestion]++;  // Track hint for this question
     
     // Show feedback
     const penaltyText = `-${hintData.penalty} points`;
@@ -804,26 +806,26 @@ function isStructureRevealed() {
 }
 
 function getQuestionHintSummary() {
-    const currentWordStates = getCurrentWordStates();
-    if (!currentWordStates) return { hintsUsed: 0, totalPenalty: 0 };
+    // Use the actual tracked hint count for this question
+    const hintsUsed = questionHints[currentQuestion] || 0;
     
-    let hintsUsed = 0;
+    // Calculate penalty from word states if available
     let totalPenalty = 0;
+    const currentWordStates = getCurrentWordStates();
     
     if (isStructureRevealed()) {
-        hintsUsed++;
         totalPenalty += 5;
     }
     
-    currentWordStates.forEach(word => {
-        if (word.state === 'first_letter') {
-            hintsUsed++;
-            totalPenalty += word.is_linking ? 5 : 3;
-        } else if (word.state === 'full_word') {
-            hintsUsed += 2;
-            totalPenalty += word.is_linking ? 10 : 6;
-        }
-    });
+    if (currentWordStates) {
+        currentWordStates.forEach(word => {
+            if (word.state === 'first_letter') {
+                totalPenalty += word.is_linking ? 5 : 3;
+            } else if (word.state === 'full_word') {
+                totalPenalty += word.is_linking ? 10 : 6;
+            }
+        });
+    }
     
     return { hintsUsed, totalPenalty };
 }
@@ -854,9 +856,9 @@ async function showResults() {
         
         if (summary.hintsUsed === 0) {
             dot.classList.add('perfect');
-        } else if (summary.hintsUsed <= 2) {
+        } else if (summary.hintsUsed === 1) {
             dot.classList.add('good');
-        } else if (summary.hintsUsed <= 5) {
+        } else if (summary.hintsUsed <= 4) {
             dot.classList.add('struggled');
         } else {
             dot.classList.add('heavy-struggle');
@@ -964,9 +966,9 @@ async function shareResults() {
         let emoji;
         if (summary.hintsUsed === 0) {
             emoji = '🟢'; // perfect (green)
-        } else if (summary.hintsUsed <= 2) {
-            emoji = '🟡'; // good (yellow)
-        } else if (summary.hintsUsed <= 5) {
+        } else if (summary.hintsUsed === 1) {
+            emoji = '🟡'; // good (yellow) - just structure
+        } else if (summary.hintsUsed <= 4) {
             emoji = '🟠'; // struggled (orange)
         } else {
             emoji = '🔴'; // heavy struggle (red)
