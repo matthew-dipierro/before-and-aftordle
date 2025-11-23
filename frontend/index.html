@@ -76,7 +76,10 @@
                 <div class="question-section">
                     <div class="question-number" id="questionNumber">Question 1 of 5</div>
                     <div class="clue" id="clue"></div>
-                    <div class="answer-display" id="answerDisplay" style="display: none;">
+                    <div class="answer-display" id="answerDisplay">
+                        <div class="hint-prompt" id="hintPrompt">
+                            💡 Tap here for hint — Show word structure (-5 points)
+                        </div>
                     </div>
                 </div>
                 
@@ -84,8 +87,8 @@
                     <input type="text" class="answer-input" id="answerInput" placeholder="Type your answer and press Enter">
                 </div>
                 
-                <div class="hint-section">
-                    <button class="hint-btn" id="hintBtn" onclick="giveHint()">Get Hint (lose points)</button>
+                <div class="submit-section">
+                    <button class="submit-btn" id="submitBtn" onclick="checkAnswer()">Submit Answer</button>
                 </div>
                 
                 <div class="feedback" id="feedback" style="display: none;"></div>
