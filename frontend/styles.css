@@ -296,13 +296,6 @@ body {
     transition: all 0.3s ease;
 }
 
-.empty-message {
-    color: var(--text-secondary);
-    font-style: italic;
-    font-size: 1rem;
-    font-weight: 400;
-}
-
 .letter-boxes {
     display: flex;
     flex-wrap: wrap;
@@ -586,43 +579,6 @@ body {
 
 .submit-btn:disabled,
 .submit-btn.disabled {
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-/* Old hint button styles - kept for backwards compatibility if needed */
-.hint-section {
-    text-align: center;
-    margin: var(--space-lg) 0;
-}
-
-.hint-btn {
-    background: var(--primary-blue);
-    color: white;
-    border: none;
-    padding: var(--space-sm) var(--space-lg);
-    border-radius: var(--radius-small);
-    cursor: pointer;
-    font-size: 0.95rem;
-    font-weight: 500;
-    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    box-shadow: var(--shadow-small);
-}
-
-.hint-btn:hover:not(:disabled) {
-    background: #0056b3;
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-medium);
-}
-
-.hint-btn:active:not(:disabled) {
-    transform: translateY(0);
-}
-
-.hint-btn:disabled {
     background: var(--bg-tertiary);
     color: var(--text-secondary);
     cursor: not-allowed;
